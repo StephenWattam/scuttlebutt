@@ -6,10 +6,66 @@
 # 
 #
 
+def check_file(filename)
+  if !File.exist?(filename)
+    $stderr.puts "File does not exist: #{filename}"
+    exit(1)
+  elsif !File.readable?(filename)
+    $stderr.puts "File is not readable: #{filename}"
+    exit(1)
+  end
+end
+
+
 # -----------------------------------------------------------------------------
 # Print usage if no argument is given
-if ARGV.length == 0
-  $stderr.puts "USAGE: #{$PROGRAM_NAME} URL_LIST\n\n"
-  $stderr.puts 'Where URL_LIST is a CSV.'
+if ARGV.length < 2
+  $stderr.puts "USAGE: #{$PROGRAM_NAME} SCRIPT URL_LIST\n"
+  $stderr.puts "\nWhere SCRIPT is a Scuttlebutt script"
+  $stderr.puts "      URL_LIST is a CSV containing data for scraping"
   exit(1)
 end
+
+check_file(ARGV[0])
+check_file(ARGV[1])
+
+
+# -----------------------------------------------------------------------------
+# Load libraries and gems
+require 'scuttlebutt'
+
+
+
+# -----------------------------------------------------------------------------
+# Load resources from files
+
+# Attach input to file, compile script into an interpreter object
+input = Scuttlebutt::Input::CSVSource.new(ARGV[1])
+engn  = Scuttlebutt::Engine.new()
+comp  = Scuttlebutt::ScriptCompiler.new(ARGV[0])
+vm    = Scuttlebutt::VirtualMachine.new(input, comp.compile, engn)
+
+# -----------------------------------------------------------------------------
+# Begin main loop
+
+
+# Start a nice spinner
+spinner = Scuttlebutt::UI::CLISpinBar.new(true)
+spinner.render_thread(0.1)
+
+# Run the process, using the callback to update the spinner
+vm.run do |count, row|
+  spinner.set_status("[#{count}] #{row.to_s}".truncate(50))
+  sleep(1)
+end
+
+# Stop the UI
+spinner.stop_thread
+
+# Close CSV
+input.close
+
+
+# -----------------------------------------------------------------------------
+# Clean up resources
+engn.close

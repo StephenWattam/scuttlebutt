@@ -1,0 +1,31 @@
+# vim: syntax=ruby
+
+
+def handy_function(a, b)
+    return "--> #{a}, #{b} <--"
+end
+
+##= r2
+
+r3()
+
+##= r3
+
+puts "Region 3"
+
+##= system_up
+puts "System up #{handy_function(1,2)}"
+
+
+##= row_up
+puts "Row up"
+
+r2()
+
+##= row_down
+
+puts "Rown down"
+
+##= system_down
+
+puts "System [of a] down."

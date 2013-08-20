@@ -14,7 +14,8 @@ Gem::Specification.new do |s|
   # Files + Resources
   s.files         = ["LICENSE"] + 
                     Dir.glob("lib/*.rb") +  
-                    Dir.glob("lib/**/*.rb") 
+                    Dir.glob("lib/**/*.rb") +
+                    Dir.glob("scripts/**/*.sbs") 
   s.require_paths = ['lib']
   
   # Executables
@@ -25,9 +26,8 @@ Gem::Specification.new do |s|
   s.has_rdoc         = false
 
   # Deps
-  s.add_runtime_dependency 'mechanize',          '~> 2.7'
-  # s.add_runtime_dependency 'sqlite3',       '~> 1.3'
-  # s.add_runtime_dependency 'mysql2',        '~> 0.3'
+  s.add_runtime_dependency 'selenium-webdriver',          '~> 2.35'
+  # s.add_runtime_dependency 'simplerpc',                   '~> 0.2'
 
   # Misc
 end
