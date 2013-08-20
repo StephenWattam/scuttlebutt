@@ -1,0 +1,15 @@
+#!/usr/bin/env ruby
+#
+#
+# Scuttlebutt main executable
+#
+# 
+#
+
+# -----------------------------------------------------------------------------
+# Print usage if no argument is given
+if ARGV.length == 0
+  $stderr.puts "USAGE: #{$PROGRAM_NAME} URL_LIST\n\n"
+  $stderr.puts 'Where URL_LIST is a CSV.'
+  exit(1)
+end
