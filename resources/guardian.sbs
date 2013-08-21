@@ -9,7 +9,7 @@ def read_thread(id)
     return if id == ""
 
     # Using Xpath, extract fun data
-    comment_data = find_comment_data(id)
+    find_comment_data(id)
 
     # Find replies, and look them all up
     replies   = @e.find_elements(:css, "li##{id} ul.d2-responses li, li##{id} ul.d2-responses div#d2-collapse-wrap li")
@@ -17,12 +17,9 @@ def read_thread(id)
 
     status "Found #{replies.length} replies."
 
-    reply_data = []
     replies.each do |reply_id|
-        reply_data << find_comment_data(reply_id)
+        find_comment_data(reply_id)
     end
-
-    return comment_data, reply_data
 end
 
 
@@ -31,22 +28,29 @@ def find_comment_data(id)
 
     status "Mining comment #{id}..."
 
-    element_path = "li##{id} div.d2-comment-inner"
-    cpath = element_path + " div.d2-right-col"
+    # Build shorthand paths so the code below is less ugly (less!)
+    element_path    = "li##{id} div.d2-comment-inner"
+    cpath           = element_path + " div.d2-right-col"
 
-    id        = id
-    picpath   = @e.find_element(:css, "#{element_path} div.d2-left-col a img").attribute("src")
-    username  = @e.find_element(:css, "#{cpath} a.d2-username").text
-    userpage  = @e.find_element(:css, "#{cpath} a.d2-username").attribute("href")
-    permalink = @e.find_element(:css, "#{cpath} div.d2-permalink p.d2-datetime a").attribute("href")
-    body      = @e.find_element(:css, "#{cpath} div.d2-body").text
-    rec_count = try(0){ @e.find_element(:css, "#{cpath} div.d2-js-recommender div.d2-recommend-count b").text.to_i }
-    reply_to  = try(0){ @e.find_element(:css, "#{cpath} div.d2-in-reply-to a").attribute("href")[1..-1] }
+    # Create a handy new hash
+    c           = new_output_row()
+    c.id        = id
+    c.picpath   = @e.find_element(:css, "#{element_path} div.d2-left-col a img").attribute("src")
+    c.username  = @e.find_element(:css, "#{cpath} a.d2-username").text
+    c.userpage  = @e.find_element(:css, "#{cpath} a.d2-username").attribute("href")
+    c.permalink = @e.find_element(:css, "#{cpath} div.d2-permalink p.d2-datetime a").attribute("href")
+    c.body      = @e.find_element(:css, "#{cpath} div.d2-body").text
+    c.rec_count = try(0){ @e.find_element(:css, "#{cpath} div.d2-js-recommender div.d2-recommend-count b").text.to_i }
+    c.reply_to  = try(0){ @e.find_element(:css, "#{cpath} div.d2-in-reply-to a").attribute("href")[1..-1] }
 
+    # Page-level variables
+    c.story_title  = @r_scratch.title
+    c.story_url    = @r_scratch.url
+    c.story_date   = @r_scratch.url
 
-    # status "found comment by #{username}, permalink: #{permalink}"
-
-    return {}
+    # XXX: at this point we know everything we want, so we can simply push the output 
+    # to the output method.
+    push_output(c)
 end
 
 
@@ -55,19 +59,14 @@ end
 # ---------------------------------------------------------------------------
 
 top_level_comments = @e.find_elements(:css => "ul.d2-comments li.d2-comment")
-        # :xpath => "//ul[@class='d2-comments']/li[@class='d2-comment']")
 top_level_comments.map! { |el| el.attribute("id").strip }
 top_level_comments.delete(nil)
 
-
-
 status "Found #{top_level_comments.length} threads..."
-
 
 top_level_comments.each do |element|
     read_thread(element)
 end
-
 
 
 # ---------------------------------------------------------------------------
@@ -115,7 +114,16 @@ status "System up"
 status "Locating comment section..."
 
 # Load the article
-@e.get(field('url'))
+@e.get(@row.url)
+
+
+# Store the title for later use
+@r_scratch.title  = @e.title
+@r_scratch.url    = @row.url
+@r_scratch.date   = try{ @e.find_element(:xpath => "//time[@itemprop='datePublished']").attribute("datetime") }
+
+
+
 
 # Find the source of the iframe
 iframe = @e.find_element("name" => "d2-iframe")
@@ -123,14 +131,10 @@ comment_url = iframe.attribute("src")
 
 
 
-
-
 status "Selecting comment page..."
 
 # Load the iframe contents
 @e.get(comment_url)
-
-
 # Select "All comments" if not already
 try{
     all_comments_link = @e.find_element(:link_text => "All comments")

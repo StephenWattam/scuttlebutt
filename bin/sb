@@ -29,10 +29,11 @@ end
 
 # -----------------------------------------------------------------------------
 # Print usage if no argument is given
-if ARGV.length < 2
-  $stderr.puts "USAGE: #{$PROGRAM_NAME} SCRIPT URL_LIST\n"
+if ARGV.length < 3
+  $stderr.puts "USAGE: #{$PROGRAM_NAME} SCRIPT URL_LIST OUTPUT_FILE\n"
   $stderr.puts "\nWhere SCRIPT is a Scuttlebutt script"
   $stderr.puts "      URL_LIST is a CSV containing data for scraping"
+  $stderr.puts "      OUTPUT_FILE is a filepath for CSV output."
   exit(1)
 end
 
@@ -44,16 +45,15 @@ check_file(ARGV[1])
 # Load libraries and gems
 require 'scuttlebutt'
 
-
-
 # -----------------------------------------------------------------------------
 # Load resources from files
 
 # Attach input to file, compile script into an interpreter object
-input = Scuttlebutt::Input::CSVSource.new(ARGV[1])
-engn  = Scuttlebutt::Engine.new()
-comp  = Scuttlebutt::ScriptCompiler.new(ARGV[0])
-vm    = Scuttlebutt::VirtualMachine.new(input, comp.compile, engn)
+input  = Scuttlebutt::Input::CSVSource.new(ARGV[1])
+output = Scuttlebutt::Output::CachedCSVOutput.new(ARGV[2])
+engine = Scuttlebutt::Engine.new()
+comp   = Scuttlebutt::ScriptCompiler.new(ARGV[0])
+vm     = Scuttlebutt::VirtualMachine.new(input, comp.compile, engine, output)
 
 # -----------------------------------------------------------------------------
 # Begin main loop
@@ -82,6 +82,15 @@ bar.stop_thread
 input.close
 
 
+
+# -----------------------------------------------------------------------------
+# Flush output
+#
+puts "Output has #{output.cached_data} items waiting to write to disk..."
+output.output
+
+
+
 # -----------------------------------------------------------------------------
 # Clean up resources
-engn.close
+engine.close

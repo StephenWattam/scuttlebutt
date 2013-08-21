@@ -43,18 +43,47 @@ module Scuttlebutt::Interpreter
   # Should contain any module-less API calls, and all data
   class InterpreterBasis < Object
 
-    attr_accessor :data, :row, :start_time
+    require 'ostruct'
+
+    attr_accessor :data, :start_time
 
     # Create a new Interpreter
-    def initialize(engine, status_callback = nil)
+    #
+    # output_obj must subclass Scuttlebutt::Output::OutputMethod
+    def initialize(engine, output_obj, status_callback = nil)
       @e              = engine
-      @data           = nil
       @row            = nil
       @start_time     = nil
       @status_callback = status_callback 
+      @output_obj     = output_obj
+
+      # For temp variables.
+      @s_scratch        = OpenStruct.new
+    end
+
+    # Create a blank scratch for people to store things in.
+    def refresh_row_scratch
+      @r_scratch = OpenStruct.new
+    end
+
+    # Store the current row as a struct for easier access.
+    def row=(row)
+      @row = OpenStruct.new(row.to_hash)
     end
 
     private
+
+    # Present output finally to the output method.
+    def push_output(row)
+      row = row.marshal_dump if row.is_a?(OpenStruct)
+      raise "Output objects must be of class Hash or OpenStruct.  If in doubt use new_output_row() to get one." unless row.is_a?(Hash)
+      @output_obj.finalise(row)
+    end
+
+    # Returns a new output row to be filled out
+    def new_output_row
+      return OpenStruct.new
+    end
 
     # TODO: loads of helpers and such
    
@@ -64,12 +93,6 @@ module Scuttlebutt::Interpreter
       else
         puts str.to_s
       end
-    end
-
-    # Return data from the current row
-    def field(field)
-      return nil if not @row
-      @row[field.to_s]
     end
 
     # Attempt to do something, but hush failure, optionally

@@ -3,13 +3,15 @@
 module Scuttlebutt
 
   require 'scuttlebutt/interpreter'
+  require 'scuttlebutt/output'
 
   class VirtualMachine
-    def initialize(data_src, code_class, engine)
+    def initialize(data_src, code_class, engine, output)
       # Store the args
       @src      = data_src
       @cls      = code_class
       @engine   = engine
+      @output   = output
 
       # Progress
       @count    = 0
@@ -17,7 +19,7 @@ module Scuttlebutt
 
     # Run over the input data, calling stuff as appropriate
     def run(status_callback = nil)
-      obj = @cls.new(@engine, status_callback)
+      obj = @cls.new(@engine, @output, status_callback)
 
       # Say we're starting
       obj.start_time = Time.now
@@ -28,6 +30,9 @@ module Scuttlebutt
       while (row = @src.next_row)
         yield(@count, row) if block_given?
 
+        # Wipe row scratch data
+        obj.refresh_row_scratch
+
         # Assign row to work on
         obj.row = row
 
@@ -37,7 +42,6 @@ module Scuttlebutt
         ##= Row down region call
         obj.row_down
 
-        puts "--> DATA -- #{obj.data}"
         @count += 1
       end
 
