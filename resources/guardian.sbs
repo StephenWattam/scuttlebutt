@@ -9,7 +9,7 @@ def read_thread(id)
     return if id == ""
 
     # Using Xpath, extract fun data
-    find_comment_data(id)
+    try{ find_comment_data(id) }
 
     # Find replies, and look them all up
     replies   = @e.find_elements(:css, "li##{id} ul.d2-responses li, li##{id} ul.d2-responses div#d2-collapse-wrap li")
@@ -18,7 +18,7 @@ def read_thread(id)
     status "Found #{replies.length} replies."
 
     replies.each do |reply_id|
-        find_comment_data(reply_id)
+        try{ find_comment_data(reply_id) } 
     end
 end
 
@@ -126,8 +126,8 @@ status "Locating comment section..."
 
 
 # Find the source of the iframe
-iframe = @e.find_element("name" => "d2-iframe")
-comment_url = iframe.attribute("src")
+iframe          = @e.find_element("name" => "d2-iframe")
+comment_url     = iframe.attribute("src")
 
 
 
@@ -144,8 +144,8 @@ try{
 
 # Show threads in "expanded" mode
 # /html/body/div/div[3]/form/div/span[2]/span/select
-select = @e.find_element(:name => "threads")
-options = select.find_elements(:tag_name, "option")
+select      = @e.find_element(:name => "threads")
+options     = select.find_elements(:tag_name, "option")
 options.each{|o| 
     o.click if o.attribute("value") =~ /expanded/i
 }

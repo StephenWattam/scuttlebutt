@@ -15,12 +15,22 @@ module Scuttlebutt::Output
 
       @keys = []
       @rows = []
+
+      @count = 0
+    end
+
+    # Estimate the amount of data unsynced
+    def cached_data
+      @rows.length
     end
 
     # Write output into the object
     def finalise(row)
       @keys = (row.keys + @keys).uniq
       @rows << row
+
+      # keep count
+      @count += 1
     end
 
     # Flush remaining output from cache

@@ -27,6 +27,13 @@ def check_file(filename)
 end
 
 
+# Return a standard-format status line string
+def gen_statusline(count_out, string)
+  return "[#{count_out}o] #{string}".truncate(STATUS_WIDTH)
+end
+
+
+
 # -----------------------------------------------------------------------------
 # Print usage if no argument is given
 if ARGV.length < 3
@@ -69,9 +76,9 @@ bar.render_thread(0.1)
 
 # Run the process, using the callback to update the spinner
 vm.run(Proc.new do |msg|
-    bar.set_status("#{msg.truncate(STATUS_WIDTH)}")
+    bar.set_status(gen_statusline(output.count, msg))
   end) do |count, row|
-    bar.set_status("Processing #{row}".truncate(STATUS_WIDTH))
+    bar.set_status(gen_statusline(output.count, "Processing #{row}"))
     bar.update_abs(count)
 end
 
