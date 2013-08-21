@@ -6,6 +6,16 @@
 # 
 #
 
+# -----------------------------------------------------------------------------
+# Config
+
+# Width of status messages in bar.
+STATUS_WIDTH = 50
+
+# -----------------------------------------------------------------------------
+# Procedures
+
+# Check a file is existent and readable.
 def check_file(filename)
   if !File.exist?(filename)
     $stderr.puts "File does not exist: #{filename}"
@@ -50,17 +60,23 @@ vm    = Scuttlebutt::VirtualMachine.new(input, comp.compile, engn)
 
 
 # Start a nice spinner
-spinner = Scuttlebutt::UI::CLISpinBar.new(true)
-spinner.render_thread(0.1)
+
+puts "Progress bar."
+sleep 1
+
+bar = Scuttlebutt::UI::CLIProgressBar.new(input.max, true, true)
+bar.render_thread(0.1)
 
 # Run the process, using the callback to update the spinner
-vm.run do |count, row|
-  spinner.set_status("[#{count}] #{row.to_s}".truncate(50))
-  sleep(1)
+vm.run(Proc.new do |msg|
+    bar.set_status("#{msg.truncate(STATUS_WIDTH)}")
+  end) do |count, row|
+    bar.set_status("Processing #{row}".truncate(STATUS_WIDTH))
+    bar.update_abs(count)
 end
 
 # Stop the UI
-spinner.stop_thread
+bar.stop_thread
 
 # Close CSV
 input.close

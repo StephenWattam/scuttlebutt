@@ -12,14 +12,23 @@ module Scuttlebutt
     require 'csv'
 
     class CSVSource
+
+      # Default config used when opening CSVs
+      CSV_CONFIG = { headers: true }
+
+      attr_reader :max
+
       def initialize(filename)
         @filename = filename
 
         raise "File not found: #{@filename}"    if !File.exist?(@filename)
         raise "File not readable: #{@filename}" if !File.readable?(@filename)
 
+        # Count rows only if it's not a pipe or other io
+        @max = count_rows if File.file?(@filename)
+
         # Open file handle
-        @csv        = CSV.open(@filename, 'r', headers: true)
+        @csv        = CSV.open(@filename, 'r', CSV_CONFIG)
 
         # Not at end...
         @end        = false
@@ -44,6 +53,16 @@ module Scuttlebutt
       def close
         @csv.close
       end
+
+    private
+
+      # Count CSV rows in a file.
+      def count_rows
+        count = 0
+        CSV.foreach(@filename, CSV_CONFIG) { count += 1 }
+        return count
+      end
+
     end
   
 

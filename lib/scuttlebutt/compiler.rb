@@ -2,7 +2,8 @@
 
 module Scuttlebutt
 
-  require 'scuttlebutt/compiler/interpreter'
+  require 'scuttlebutt/interpreter'
+  include Scuttlebutt::Interpreter
 
   class ScriptCompiler
 
@@ -69,25 +70,7 @@ module Scuttlebutt
       #       2) Have a list of allowed regions and check people aren't clobbering things
 
       # Next up, generate an object from them
-      cls = Class.new(Scuttlebutt::Compiler::InterpreterBasis)
-      regions.each do |name, code|
-
-        # TODO: define libs somehow (perhaps using a module?)
-        cls.send(:class_eval, libs)
-
-        # Define a new method in the class
-        puts "-> Defining method #{name}..."
-        cls.send(:define_method, name.to_sym, Proc.new do ||
-          begin
-            eval(code)
-          rescue StandardError => e
-            $stderr.puts "*** Exception in script, region #{name}."
-            $stderr.puts "    #{e}"
-            $stderr.puts "    #{e.backtrace.join("\n    ")}"
-          end
-        end ) # /cls.send
-
-      end # /regions.each 
+      cls = Scuttlebutt::Interpreter.new(libs, regions)
 
       return cls
     end

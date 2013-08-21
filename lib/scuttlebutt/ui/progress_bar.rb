@@ -157,12 +157,10 @@ module Scuttlebutt::UI
     private
 
     def start_render_loop(sleeptime)
-      estring = ""
       while(@stop_threaded_updates == false)
         update_via_callbacks if @use_callbacks_for_updates
         render
         sleep(sleeptime)
-
 
         @stop_threaded_updates = @end_callback.call if @use_callbacks_for_updates and @end_callback
       end
