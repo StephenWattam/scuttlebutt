@@ -5,6 +5,7 @@ module Scuttlebutt::Interpreter
   # Require extra API modules here.
   require 'scuttlebutt/interpreter/interface'
   require 'scuttlebutt/interpreter/time'
+  # require 'scuttlebutt/interpreter/debug'
   # require 'scuttlebutt/interpreter/lookup'
   # require 'scuttlebutt/interpreter/output'
 
@@ -20,7 +21,7 @@ module Scuttlebutt::Interpreter
       cls.send(:class_eval, libs)
 
       # Define a new method in the class
-      puts "-> Defining method #{name}..."
+      # puts "-> Defining method #{name}..."
       cls.send(:define_method, name.to_sym, Proc.new do ||
               begin
                  eval(code)
@@ -72,6 +73,14 @@ module Scuttlebutt::Interpreter
     end
 
     private
+
+    def debug(name = nil)
+      require 'pry'
+      str = "sbdb"
+      str += "/#{name}" if name
+      Pry.config.prompt = proc { |obj, nest_level, _| "#{str}/#{nest_level}> " }
+      pry
+    end
 
     # Present output finally to the output method.
     def push_output(row)

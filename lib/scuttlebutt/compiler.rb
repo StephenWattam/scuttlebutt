@@ -20,7 +20,7 @@ module Scuttlebutt
 
       libs, regions = load_code_regions
 
-      puts "Found #{regions.length} code region[s]."
+      # puts "Found #{regions.length} code region[s]."
 
       cls = build_class(libs, regions)
 
@@ -29,11 +29,18 @@ module Scuttlebutt
 
     private
 
+    DEFAULT_CODE_REGIONS = { system_up:   [],
+                             system_down: [],
+                             row_up:      [],
+                             row_down:    []
+    }
+                             
+
     # Load code regions from a file, 
     # and return a hash of them, along with a listing for
     # the special "libs" listing.
     def load_code_regions
-      regions = {}
+      regions = DEFAULT_CODE_REGIONS
      
       # Count up lines by region, interpreting the ##= syntax.
       current_region = :__lib__

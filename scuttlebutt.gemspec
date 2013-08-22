@@ -27,6 +27,7 @@ Gem::Specification.new do |s|
 
   # Deps
   s.add_runtime_dependency 'selenium-webdriver',          '~> 2.35'
+  s.add_runtime_dependency 'pry',                         '~> 0.9'
   # s.add_runtime_dependency 'simplerpc',                   '~> 0.2'
 
   # Misc
