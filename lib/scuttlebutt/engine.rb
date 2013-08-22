@@ -12,14 +12,14 @@ module Scuttlebutt
   
     require 'selenium-webdriver'
 
-    TIMEOUT_PAGE_LOAD = 60
-    TIMEOUT_DOM_EDITS = 0.2
+    TIMEOUT_PAGE_LOAD   = 60
+    TIMEOUT_DOM_EDITS   = 0.2
     TIMEOUT_SCRIPT_EXEC = 60
 
 
-    def initialize
-      puts "New engine"
-      @driver = Selenium::WebDriver.for :firefox  # TODO: make configurable
+    def initialize(browser = :firefox)
+      LOG.info "Starting browser engine for browser: #{browser}"
+      @driver = Selenium::WebDriver.for(browser)  # TODO: make configurable
 
       @driver.manage.timeouts.implicit_wait   = TIMEOUT_DOM_EDITS
       @driver.manage.timeouts.page_load       = TIMEOUT_PAGE_LOAD
@@ -28,7 +28,7 @@ module Scuttlebutt
     end
 
     def close
-      puts "Closing engine"
+      LOG.info "Shutting down browser engine..."
       @driver.quit
     end
 

@@ -1,5 +1,15 @@
 # vim: syntax=ruby
 
+# -- parameters -- 
+# author:           "Stephen Wattam"
+# email:            stephenwattam@gmail.com
+# browser:          firefox
+# input_fields:     url
+# output_fields:    one two three four_five
+# 
+# username:         blah
+# password:         siofn8908in2ur
+# -- end --
 
 
 def get_permalink(css)
@@ -58,89 +68,84 @@ def read_single_comment(id)
 end
 
 
-# ---------------------------------------------------------------------------
-##= read_comment_data
-# ---------------------------------------------------------------------------
+def read_comment_data
 
-# First find all comments and extract numeric ID
-comments = @e.find_elements(:css, "li.dsq-comment")
-comments.map! do |e| 
-    if (m = e.attribute("id").match(/dsq-comment-(?<idnum>[0-9]+)$/))
-        m['idnum']    
+    # First find all comments and extract numeric ID
+    comments = @e.find_elements(:css, "li.dsq-comment")
+    comments.map! do |e| 
+        if (m = e.attribute("id").match(/dsq-comment-(?<idnum>[0-9]+)$/))
+            m['idnum']    
+        else
+            nil
+        end
+    end
+    comments.delete(nil)
+
+    comments.each do |id|
+        try{ read_single_comment(id) }
+    end
+end
+
+
+def read_then_click_next
+
+    # Read comment data from the current page
+    read_comment_data
+
+    # Find the "next" button, or fall out if none exists
+    prev_page = tryquit{ @e.find_element(:css, "li.dsq-numbered-pagination span.current_page").text.to_i }
+
+    status "Moving to page #{prev_page + 1}"
+
+    # Manually fire javascript
+    @e.script("DISQUS.dtpl.actions.fire(\"thread.paginate\", #{prev_page + 1});")
+    Time.delay(3)
+
+    # Find which page we have moved to.
+    # IF this is below the previous page, it means we have wrapped around, so drop out
+    # and reached the end, so drop out
+    page = tryquit { @e.find_element(:css, "li.dsq-numbered-pagination span.current_page").text.to_i }
+
+    if page > prev_page 
+        read_then_click_next
+    end
+end
+
+
+def row_up
+
+    status "Reading article data"
+
+    # Load the article
+    @e.get(@row.url)
+
+    # debug "article"
+
+    # Store the title for later use
+    @r_scratch.title  = @e.title
+    @r_scratch.url    = @row.url
+    # TODO:
+    # @r_scratch.date   = try{ @e.find_element(:xpath => "//time[@itemprop='datePublished']").attribute("datetime") }
+
+
+    # See if comments even exist
+    if try{ @e.find_element(:id, "disqus_thread") }
+
+
+
+        # Pause auto-updating
+        autoupdate_status = @e.find_element(:id, "dsq-realtime-status").text
+        if autoupdate_status == "enabled"
+            @e.find_element(:id, "dsq-realtime-toggle").click
+        end
+
+
+        # Loop, reading each page of comments
+        read_then_click_next
+
+
     else
-        nil
-    end
-end
-comments.delete(nil)
-
-puts "--> #{comments.length}"
-
-comments.each do |id|
-    read_single_comment(id)
-end
-
-
-
-# ---------------------------------------------------------------------------
-##= read_then_click_next
-# ---------------------------------------------------------------------------
-
-# Read comment data from the current page
-read_comment_data
-
-# Find the "next" button
-prev_page = @e.find_element(:css, "li.dsq-numbered-pagination span.current_page").text.to_i
-
-status "Moving to page #{prev_page + 1}"
-
-# Manually fire javascript
-@e.script("DISQUS.dtpl.actions.fire(\"thread.paginate\", #{prev_page + 1});")
-Time.delay(3)
-
-# Find which page we have moved to.
-# IF this is below the previous page, it means we have wrapped around, so drop out
-# and reached the end, so drop out
-page = @e.find_element(:css, "li.dsq-numbered-pagination span.current_page").text.to_i
-if page > prev_page 
-    read_then_click_next
-end
-
-
-# ---------------------------------------------------------------------------
-##= row_up
-# ---------------------------------------------------------------------------
-
-status "Reading article data"
-
-# Load the article
-@e.get(@row.url)
-
-# debug "article"
-
-# Store the title for later use
-@r_scratch.title  = @e.title
-@r_scratch.url    = @row.url
-# TODO:
-# @r_scratch.date   = try{ @e.find_element(:xpath => "//time[@itemprop='datePublished']").attribute("datetime") }
-
-
-# See if comments even exist
-if try{ @e.find_element(:id, "disqus_thread") }
-
-
-
-    # Pause auto-updating
-    autoupdate_status = @e.find_element(:id, "dsq-realtime-status").text
-    if autoupdate_status == "enabled"
-        @e.find_element(:id, "dsq-realtime-toggle").click
+        status "No comments section"
     end
 
-
-    # Loop, reading each page of comments
-    read_then_click_next
-
-
-else
-    status "No comments section"
 end
-

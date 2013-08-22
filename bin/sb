@@ -9,8 +9,7 @@
 # -----------------------------------------------------------------------------
 # Config
 
-# Width of status messages in bar.
-STATUS_WIDTH = 50
+DEFAULT_BROWSER = :firefox
 
 # -----------------------------------------------------------------------------
 # Procedures
@@ -26,11 +25,6 @@ def check_file(filename)
   end
 end
 
-
-# Return a standard-format status line string
-def gen_statusline(count_out, string)
-  return "[#{count_out}o] #{string}".truncate(STATUS_WIDTH)
-end
 
 
 
@@ -51,41 +45,43 @@ check_file(ARGV[1])
 # -----------------------------------------------------------------------------
 # Load libraries and gems
 require 'scuttlebutt'
+include Scuttlebutt
+
+
+# -----------------------------------------------------------------------------
+# Configure logs
+LOG.add_log( :default, STDOUT, UI::MultiOutputLogger.string_to_level('debug') )
+LOG.formatter = proc do |severity, datetime, progname, msg|
+  "#{severity.to_s[0]} #{datetime}: #{msg}\n"
+end
+
 
 # -----------------------------------------------------------------------------
 # Load resources from files
 
 # Attach input to file, compile script into an interpreter object
-input  = Scuttlebutt::Input::CSVSource.new(ARGV[1])
-output = Scuttlebutt::Output::CachedCSVOutput.new(ARGV[2])
-engine = Scuttlebutt::Engine.new()
-comp   = Scuttlebutt::ScriptCompiler.new(ARGV[0])
-vm     = Scuttlebutt::VirtualMachine.new(input, comp.compile, engine, output)
+input  = Input::CSVSource.new(ARGV[1])
+output = Output::CachedCSVOutput.new(ARGV[2])
+
+
+script = ScriptCompiler.compile(ARGV[0])
+LOG.info "Script read from #{script.filename}"
+
+browser = DEFAULT_BROWSER
+browser = script.params[:browser].first.to_sym if script.params[:browser]
+engine = Engine.new(browser)
+
+vm     = VirtualMachine.new(input, output, engine)
 
 # -----------------------------------------------------------------------------
 # Begin main loop
 
 
-# Start a nice spinner
-
-puts "Progress bar."
-sleep 1
-
-bar = Scuttlebutt::UI::CLIProgressBar.new(input.max, true, true)
-bar.render_thread(0.1)
-
 # Run the process, using the callback to update the spinner
-vm.run(Proc.new do |msg|
-    bar.set_status(gen_statusline(output.count, msg))
-  end) do |count, row|
-    bar.set_status(gen_statusline(output.count, "Processing #{row}"))
-    bar.update_abs(count)
-end
+vm.run(script)
 
-# Stop the UI
-bar.stop_thread
 
-# Close CSV
+# Close input CSV
 input.close
 
 

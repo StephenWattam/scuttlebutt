@@ -2,91 +2,110 @@
 
 module Scuttlebutt
 
+  require 'shellwords'
+
   require 'scuttlebutt/interpreter'
   include Scuttlebutt::Interpreter
 
+  # Represents a script in the system.
+  # Used to keep track of what is instantiated and where
+  class Script
+
+    attr_reader :filename, :params, :cls, :instance
+
+    def initialize(filename, params, cls)
+      @filename   = filename
+      @params     = params
+      @cls        = cls
+
+      @instance   = nil
+    end
+
+    def instantiate(log, engine, output)
+      @instance   = cls.new(log, engine, output)
+    end
+  end
+
+  # Compile a script (text) into a Script (object)
   class ScriptCompiler
 
-    REGION_START = /^\s*##=\s*(?<region_name>[a-z0-9\_\-]+)\s*$/
+    SYN_COMMENT       = /^\s*#(?<comment>.*)$/
+    SYN_BEGIN_PARAMS  = /^\s*--\s+parameters\s+--\s*$/
+    SYN_END_PARAMS    = /^\s*--\s+end\s+--\s*$/
 
-    def initialize(file)
-      @filename = file
-    end
+    SYN_PARAMS        = /^\s*(?<key>[a-z][a-z_0-9]*):(?<value>.+)$/
+
 
     # Compile an SBS file into a ruby object
     # that handles state and the Scuttlebutt engine
-    def compile
-      syntax_check
+    def self.compile(filename)
+      syntax_check(filename)
 
-      libs, regions = load_code_regions
+      params, code = load_code(filename)
 
       # puts "Found #{regions.length} code region[s]."
 
-      cls = build_class(libs, regions)
+      cls = Scuttlebutt::Interpreter.new(params, code)
 
-      return cls
+      return Script.new(filename, params, cls)
     end
 
     private
 
-    DEFAULT_CODE_REGIONS = { system_up:   [],
-                             system_down: [],
-                             row_up:      [],
-                             row_down:    []
-    }
-                             
-
     # Load code regions from a file, 
     # and return a hash of them, along with a listing for
     # the special "libs" listing.
-    def load_code_regions
-      regions = DEFAULT_CODE_REGIONS
+    def self.load_code(filename)
      
-      # Count up lines by region, interpreting the ##= syntax.
-      current_region = :__lib__
-      f = File.open(@filename, 'r')
+      # Somewhere to keep things
+      params = {}
+      code   = []
 
-      # Iterate over lines
+      # Count up lines and take into account param blocks
+      f = File.open(filename, 'r')
+
+      # Loop over each item
+      in_param_block  = false 
+      count           = 0
       f.each_line do |line|
+        count += 1
         line.chomp!
 
-        # Region header
-        if (m = line.match(REGION_START))
-          current_region = m['region_name']
-        # Add code to the last region
-        else
-          regions[current_region] = [] if not regions[current_region]
-          regions[current_region] << line
-        end # if
+        if (m = line.match(SYN_COMMENT))
+          
+          # Read the comment value
+          comment_string = m['comment']
 
-      end # each_line
-      f.close
+          # Parse comm
+          if comment_string =~ SYN_BEGIN_PARAMS
+            LOG.debug "Param block start on line #{count}"
+            in_param_block = true
+          elsif comment_string =~ SYN_END_PARAMS
+            LOG.debug "Param block end on line #{count}"
+            in_param_block = false
+          elsif in_param_block && (m = comment_string.match(SYN_PARAMS))
 
-      # Then stitch them all together
-      regions.keys.each { |k| regions[k] = regions[k].join("\n") }
+            key   = m['key']
+            value = Shellwords.shellwords(m['value'])
+            value = true if value.length == 0
 
-      # Lastly, remove the special region "libs"
-      libs = regions.delete(:__lib__)
-      return libs, regions
+            LOG.debug "Parameter: #{key}, value: #{value}"
+          end
+
+        end # /if
+
+        # Lastly, add to the code listing anyway
+        # so the line numbers add up.
+        code << line
+
+      end # /f.each_line
+ 
+      return params, code.join("\n")
     end
   
-
-    # Construct a class that interprets data
-    def build_class(libs, regions)
-      # TODO: 1) check regions have actual data in them...
-      #       2) Have a list of allowed regions and check people aren't clobbering things
-
-      # Next up, generate an object from them
-      cls = Scuttlebutt::Interpreter.new(libs, regions)
-
-      return cls
-    end
-
-
-
     # Perform a syntax check
-    def syntax_check
-      $stderr.puts "STUB: syntex_check in Scuttlebutt::ScriptCompiler for file #{@filename}"
+    def self.syntax_check(filename)
+      LOG.warn "STUB: syntex_check in Scuttlebutt::ScriptCompiler for file #{filename}"
     end
   end
 

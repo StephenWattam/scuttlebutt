@@ -21,8 +21,8 @@ module Scuttlebutt
       def initialize(filename)
         @filename = filename
 
-        raise "File not found: #{@filename}"    if !File.exist?(@filename)
-        raise "File not readable: #{@filename}" if !File.readable?(@filename)
+        raise "File not found: #{@filename}"    unless File.exist?(@filename)
+        raise "File not readable: #{@filename}" unless File.readable?(@filename)
 
         # Count rows only if it's not a pipe or other io
         @max = count_rows if File.file?(@filename)
