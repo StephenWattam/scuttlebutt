@@ -6,20 +6,20 @@ module Scuttlebutt
   require 'scuttlebutt/output'
 
   class VirtualMachine
+
+    # At most retry a row this many times
+    MAX_RETRIES = 10
+
     def initialize(input, output, engine)
       # Store the args
       @input    = input
       @output   = output
       @engine   = engine
-
-      # Progress
-      @count    = 0
     end
 
     # Run over the input data, calling stuff as appropriate
     def run(script)
       LOG.info "Running job"
-
 
       LOG.debug "Instantiating interpreter object..."
       script.instantiate(LOG, @engine, @output)
@@ -29,33 +29,83 @@ module Scuttlebutt
       obj.start_time = Time.now
 
       ##= Script up region call.
-      protected_run(obj, :system_up)
+      system_up(obj)
 
+      count = 0
       while (row = @input.next_row)
-        LOG.info "Processing row #{@count}"
+        count += 1
 
-        # Wipe row scratch data
-        obj.refresh_row_scratch
+        # Loop until we run out of retries or the row completes successfully...
+        retries = script.params.retries ? script.params.retries.first.to_i : MAX_RETRIES
+        success = false
+        while !success && retries > 0
 
-        # Assigno row to work on
-        obj.row = row
+          # Take one off...
+          retries -= 1
 
-        ##= Row up region call
-        protected_run(obj, :row_up)
+          # Tell the output method to start fresh
+          @output.start_row
 
-        ##= Row down region call
-        protected_run(obj, :row_down)
+          # Try to run the row
+          begin
 
-        @count += 1
+            # Run the row and say it worked.
+            LOG.info "*** Processing row #{count}#{@input.max ? " of #{@input.max}" : ''} (output: #{@output.count} item[s] complete)"
+            process_row(obj, row)
+            success = true
+
+          rescue Errno::ECONNREFUSED, EOFError
+            @output.discard_row
+
+            # Reconnect if the browser dies
+            LOG.error "Connection to browser lost, reconnecting and running pullup..."
+            connect_driver
+            system_up
+          rescue StandardError => e
+            @output.discard_row
+
+            LOG.error "Error running row #{count}.  Will retry #{retries} more time[s] before giving up."
+            LOG.error "The error was: #{e}"
+            LOG.debug "#{e.backtrace.join("\n")}"
+          end
+        end
+
+        # Since it worked, flush the output
+        @output.finalise_row
       end
 
       ##= Script down region call
-      protected_run(obj, :system_down)
+      system_down(obj)
 
-      return @count
+      return count
     end
 
   private
+
+    def process_row(obj, row)
+
+      # Wipe row scratch data
+      obj.refresh_row_scratch
+
+      # Assigno row to work on
+      obj.row = row
+
+      ##= Row up region call
+      protected_run(obj, :row_up)
+
+      ##= Row down region call
+      protected_run(obj, :row_down)
+    end
+
+    def system_up(obj)
+      protected_run(obj, :system_up)
+    end
+
+
+    def system_down(obj)
+      protected_run(obj, :system_down)
+    end
+
 
     # Execute a call on the interpreter,
     # whilst handling messages and exceptions in a nice way.

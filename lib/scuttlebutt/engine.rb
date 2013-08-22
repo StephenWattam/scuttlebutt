@@ -16,15 +16,12 @@ module Scuttlebutt
     TIMEOUT_DOM_EDITS   = 0.2
     TIMEOUT_SCRIPT_EXEC = 60
 
+    attr_reader :browser
 
     def initialize(browser = :firefox)
-      LOG.info "Starting browser engine for browser: #{browser}"
-      @driver = Selenium::WebDriver.for(browser)  # TODO: make configurable
+      @browser = browser
 
-      @driver.manage.timeouts.implicit_wait   = TIMEOUT_DOM_EDITS
-      @driver.manage.timeouts.page_load       = TIMEOUT_PAGE_LOAD
-      @driver.manage.timeouts.script_timeout  = TIMEOUT_SCRIPT_EXEC
-      # @driver.visible = false
+      connect_driver
     end
 
     def close
@@ -35,14 +32,31 @@ module Scuttlebutt
     # Pass calls through to the driver if unknown
     def method_missing(meth, *args, &block)
       if @driver.respond_to?(meth)
+
         if block
           @driver.send(meth, *args){ |*bargs| block.yield(*bargs) }
         else
           @driver.send(meth, *args)
         end
+
       else
         super
       end
+    end
+
+
+  private
+
+    def connect_driver
+      
+      LOG.info "Starting driver for browser: #{browser}"
+      @driver = Selenium::WebDriver.for(browser)  # TODO: make configurable
+
+      @driver.manage.timeouts.implicit_wait   = TIMEOUT_DOM_EDITS
+      @driver.manage.timeouts.page_load       = TIMEOUT_PAGE_LOAD
+      @driver.manage.timeouts.script_timeout  = TIMEOUT_SCRIPT_EXEC
+      # @driver.visible = false
+
     end
 
   end

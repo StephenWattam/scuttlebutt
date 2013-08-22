@@ -57,18 +57,11 @@ module Scuttlebutt::Interpreter
       @s_scratch        = OpenStruct.new
     end
 
-    def system_up
-    end
-
-    def system_down
-    end
-
-    def row_up
-    end
-
-    def row_down
-    end
-
+    # - overridden later -
+    def system_up;    end
+    def system_down;  end
+    def row_up;       end
+    def row_down;     end
 
     # Create a blank scratch for people to store things in.
     def refresh_row_scratch
@@ -82,13 +75,33 @@ module Scuttlebutt::Interpreter
 
     private
 
-    def debug(name = nil)
-      @log.info "Starting debug console.  Press ^D to quit."
+    # Start a debug console
+    def debug_console(binding = binding)
+      @log.info "Debug console.  Press ^D to continue."
+
+      # Format the trace nicely for people
+      trace = caller
+      trace.map! do |t|
+        if m = t.match(/^\(eval\):(?<line>[0-9]+):in.*`(?<proc>.+)'/)
+          "line #{m['line']} in #{m['proc']}"
+        else
+          nil
+        end
+      end
+      trace.delete(nil)
+
+      # output
+      @log.info "Here's a handy trace of where you were in the script:"
+      trace.each { |t| @log.info "  #{t}" }
+
       require 'pry'
-      str = "sbdb"
-      str += "/#{name}" if name
-      Pry.config.prompt = proc { |obj, nest_level, _| "#{str}/#{nest_level}> " }
-      pry
+
+      Pry.config.prompt = proc { |obj, nest_level, _| "[#{nest_level}]sbdb> " }
+
+      # TODO: See if you can auto-pry on the caller rather than relying on the binding passed in
+      # puts "--> #{caller}"
+
+      binding.pry
     end
 
     # Present output finally to the output method.
@@ -98,6 +111,10 @@ module Scuttlebutt::Interpreter
       row = row.marshal_dump if row.is_a?(OpenStruct)
       raise "Output objects must be of class Hash or OpenStruct.  If in doubt use new_output_row() to get one." unless row.is_a?(Hash)
       @output.finalise(row)
+
+    rescue StandardError => e
+      @log.error "Error writing output: #{e}"
+      @log.debug "#{e.backtrace.join("\n")}"
     end
 
     # Returns a new output row to be filled out
@@ -106,9 +123,17 @@ module Scuttlebutt::Interpreter
     end
 
     # TODO: loads of helpers and such
-   
+
+    def warn(str)
+      @log.warn("[SW] #{str}")
+    end
+
+    def debug(str)
+      @log.debug("[SD] #{str}")
+    end
+
     def status(str)
-      @log.info(str.to_s)
+      @log.info("[SI] #{str}")
     end
 
     # Attempt to do something, but hush failure, optionally

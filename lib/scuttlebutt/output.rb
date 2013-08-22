@@ -23,8 +23,27 @@ module Scuttlebutt::Output
     end
 
     # Force output of cache
-    def output
+    def flush 
       puts "STUB: output in Scuttlebutt::Output::OutputMethod"
+    end
+
+    # start caching for a given row
+    def start_row
+      puts "STUB: start_row in Scuttlebutt::Output::OutputMethod"
+    end
+
+    # Discard the last row's worth of data
+    def discard_row
+      puts "STUB: discard_row in Scuttlebutt::Output::OutputMethod"
+    end
+
+    # Finalise the row's worth of data
+    def finalise_row 
+      puts "STUB: finalise_row in Scuttlebutt::Output::OutputMethod"
+    end
+
+    # Close all resources.
+    def close
     end
   end
 

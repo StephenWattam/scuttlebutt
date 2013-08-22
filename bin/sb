@@ -50,7 +50,8 @@ include Scuttlebutt
 
 # -----------------------------------------------------------------------------
 # Configure logs
-LOG.add_log( :default, STDOUT, UI::MultiOutputLogger.string_to_level('debug') )
+LOG.add_log( :default, STDOUT, UI::MultiOutputLogger.string_to_level('info') )
+LOG.add_log( :debug,   "debug.log", UI::MultiOutputLogger.string_to_level('debug') )
 LOG.formatter = proc do |severity, datetime, progname, msg|
   "#{severity.to_s[0]} #{datetime}: #{msg}\n"
 end
@@ -59,41 +60,52 @@ end
 # -----------------------------------------------------------------------------
 # Load resources from files
 
-# Attach input to file, compile script into an interpreter object
-input  = Input::CSVSource.new(ARGV[1])
-output = Output::CachedCSVOutput.new(ARGV[2])
+
+begin
+
+  # Read the script from disk
+  script = ScriptCompiler.compile(ARGV[0])
+  LOG.info "Script read from #{script.filename}"
+  LOG.info "Script written by #{script.params.author.join(', ')}" if script.params.author
+  LOG.info "Contact details: #{script.params.email.join(', ')}" if script.params.author
+
+  # Create input/output objects and check against script
+  input  = Input::CSVSource.new(ARGV[1])
+  output = script.params.output_fields ? Output::CSVOutput.new(ARGV[2], script.params.output_fields) : Output::CachedCSVOutput.new(ARGV[2])
+
+  script.check_input(input)
+  script.check_output(output)
+
+  # Apply engine options from the script
+  browser = DEFAULT_BROWSER
+  browser = script.params.browser.first.to_sym if script.params.browser
+  engine = Engine.new(browser)
+
+  # Create the execution context
+  vm     = VirtualMachine.new(input, output, engine)
+
+  # -----------------------------------------------------------------------------
+  # Begin main loop
 
 
-script = ScriptCompiler.compile(ARGV[0])
-LOG.info "Script read from #{script.filename}"
-
-browser = DEFAULT_BROWSER
-browser = script.params[:browser].first.to_sym if script.params[:browser]
-engine = Engine.new(browser)
-
-vm     = VirtualMachine.new(input, output, engine)
-
-# -----------------------------------------------------------------------------
-# Begin main loop
+  # Run the process, using the callback to update the spinner
+  vm.run(script)
 
 
-# Run the process, using the callback to update the spinner
-vm.run(script)
+  # Close input CSV
+  input.close
 
+rescue StandardError => e
+  LOG.fatal "Fatal error: #{e}"
+  LOG.debug "#{e.backtrace.join("\n")}"
 
-# Close input CSV
-input.close
+ensure
+  engine.close if engine
 
+  if output
+    LOG.info "Output has #{output.cached_data} items waiting to write to disk..."
+    output.flush
+    output.close
+  end
+end
 
-
-# -----------------------------------------------------------------------------
-# Flush output
-#
-puts "Output has #{output.cached_data} items waiting to write to disk..."
-output.output
-
-
-
-# -----------------------------------------------------------------------------
-# Clean up resources
-engine.close

@@ -6,146 +6,151 @@
 # browser:          firefox
 # input_fields:     url
 # output_fields:    one two three four_five
+# retries:          5
 # 
 # username:         blah
 # password:         siofn8908in2ur
 # -- end --
 
 
+# ===========================================================================
 def get_permalink(css)
 
-    # Follow the link given
-    link = @e.find_element(:css, css)
-    link.click
-    Time.delay(0.1)
+  # Follow the link given
+  link = @e.find_element(:css, css)
+  link.click
+  Time.delay(0.1)
 
-    # Then find the box, and read the input value
-    permalink = @e.find_element(:css, "div.dsq-popup-content div.dsq-field input").attribute("value")
+  # Then find the box, and read the input value
+  permalink = @e.find_element(:css, "div.dsq-popup-content div.dsq-field input").attribute("value")
 
-    # Close the popup
-    @e.find_element(:css, "button.dsq-popup-close").click
-    Time.delay(0.1)
+  # Close the popup
+  @e.find_element(:css, "button.dsq-popup-close").click
+  Time.delay(0.1)
 
-    return permalink
+  return permalink
 end
 
+
+# ===========================================================================
 def get_recommendation_count(css)
-    # Note that this may not work...
-    try{ 
-        # Find the element
-        recommender_text = @e.find_element(:css, css).text
+  # Note that this may not work...
+  try{ 
+    # Find the element
+    recommender_text = @e.find_element(:css, css).text
 
-        # Regex the count out
-        if (m = recommender_text.match(/Recommended by (?<count>[0-9]+) people/))
-            return m['count'].to_i
-        end
-    }
+    # Regex the count out
+    if (m = recommender_text.match(/Recommended by (?<count>[0-9]+) people/))
+      return m['count'].to_i
+    end
+  }
 
-    return nil
+  return nil
 end
 
 
+# ===========================================================================
 def read_single_comment(id)
 
-    status "Reading comment #{id}"
+  debug "Reading comment #{id}"
 
-    # Shorten later data extraction
-    root = "div#dsq-comment-body-#{id}"
-    
-    # Get a new output row and add stuff to it
-    c = new_output_row
-    c.id        = id
-    c.picpath   = @e.find_element(:css, "#{root} div.dsq-avatar img").attribute("src")
-    c.username  = @e.find_element(:css, "#{root} div.dsq-comment-header p span.dsq-commenter-name").text
-    c.time      = @e.find_element(:css, "#{root} div.dsq-comment-header p a").text
-    c.permalink = get_permalink("#{root} div.dsq-comment-header p a")
-    c.body      = @e.find_element(:css, "div#dsq-comment-text-#{id}").text
-    c.rec_count = get_recommendation_count("a#dsq-comment-like-count-#{id}")
+  # Shorten later data extraction
+  root = "div#dsq-comment-body-#{id}"
 
-    # Submit.
-    push_output(c)
+  # Get a new output row and add stuff to it
+  c = new_output_row
+  c.id        = id
+  c.picpath   = @e.find_element(:css, "#{root} div.dsq-avatar img").attribute("src")
+  c.username  = @e.find_element(:css, "#{root} div.dsq-comment-header p span.dsq-commenter-name").text
+  c.time      = @e.find_element(:css, "#{root} div.dsq-comment-header p a").text
+  c.permalink = get_permalink("#{root} div.dsq-comment-header p a")
+  c.body      = @e.find_element(:css, "div#dsq-comment-text-#{id}").text
+  c.rec_count = get_recommendation_count("a#dsq-comment-like-count-#{id}")
+
+  # Submit.
+  push_output(c)
 
 end
 
 
+# ===========================================================================
 def read_comment_data
 
-    # First find all comments and extract numeric ID
-    comments = @e.find_elements(:css, "li.dsq-comment")
-    comments.map! do |e| 
-        if (m = e.attribute("id").match(/dsq-comment-(?<idnum>[0-9]+)$/))
-            m['idnum']    
-        else
-            nil
-        end
-    end
-    comments.delete(nil)
+  # First find all comments and extract numeric ID
+  comments = @e.find_elements(:css, "li.dsq-comment")
 
-    comments.each do |id|
-        try{ read_single_comment(id) }
+  # debug_console(binding)
+
+  comments.map! do |e| 
+    if (m = e.attribute("id").match(/dsq-comment-(?<idnum>[0-9]+)$/))
+      m['idnum']    
+    else
+      nil
     end
+  end
+  comments.delete(nil)
+
+  comments.each do |id|
+    try{ read_single_comment(id) }
+  end
 end
 
 
+# ===========================================================================
 def read_then_click_next
 
-    # Read comment data from the current page
-    read_comment_data
+  # Read comment data from the current page
+  read_comment_data
 
-    # Find the "next" button, or fall out if none exists
-    prev_page = tryquit{ @e.find_element(:css, "li.dsq-numbered-pagination span.current_page").text.to_i }
+  # Find the "next" button, or fall out if none exists
+  prev_page = tryquit{ @e.find_element(:css, "li.dsq-numbered-pagination span.current_page").text.to_i }
 
-    status "Moving to page #{prev_page + 1}"
+  status "Moving to page #{prev_page + 1}"
 
-    # Manually fire javascript
-    @e.script("DISQUS.dtpl.actions.fire(\"thread.paginate\", #{prev_page + 1});")
-    Time.delay(3)
+  # Manually fire javascript
+  @e.script("DISQUS.dtpl.actions.fire(\"thread.paginate\", #{prev_page + 1});")
+  Time.delay(3)
 
-    # Find which page we have moved to.
-    # IF this is below the previous page, it means we have wrapped around, so drop out
-    # and reached the end, so drop out
-    page = tryquit { @e.find_element(:css, "li.dsq-numbered-pagination span.current_page").text.to_i }
+  # Find which page we have moved to.
+  # IF this is below the previous page, it means we have wrapped around, so drop out
+  # and reached the end, so drop out
+  page = tryquit { @e.find_element(:css, "li.dsq-numbered-pagination span.current_page").text.to_i }
 
-    if page > prev_page 
-        read_then_click_next
-    end
+  if page > prev_page 
+    read_then_click_next
+  end
 end
 
 
+# ===========================================================================
 def row_up
 
-    status "Reading article data"
+  status "Reading article data"
 
-    # Load the article
-    @e.get(@row.url)
+  # Load the article
+  @e.get(@row.url)
 
-    # debug "article"
+  # debug "article"
 
-    # Store the title for later use
-    @r_scratch.title  = @e.title
-    @r_scratch.url    = @row.url
-    # TODO:
-    # @r_scratch.date   = try{ @e.find_element(:xpath => "//time[@itemprop='datePublished']").attribute("datetime") }
+  # Store the title for later use
+  @r_scratch.title  = @e.title
+  @r_scratch.url    = @row.url
 
 
-    # See if comments even exist
-    if try{ @e.find_element(:id, "disqus_thread") }
+  # See if comments even exist
+  if try{ @e.find_element(:id, "disqus_thread") }
 
-
-
-        # Pause auto-updating
-        autoupdate_status = @e.find_element(:id, "dsq-realtime-status").text
-        if autoupdate_status == "enabled"
-            @e.find_element(:id, "dsq-realtime-toggle").click
-        end
-
-
-        # Loop, reading each page of comments
-        read_then_click_next
-
-
-    else
-        status "No comments section"
+    # Pause auto-updating
+    autoupdate_status = @e.find_element(:id, "dsq-realtime-status").text
+    if autoupdate_status == "enabled"
+      @e.find_element(:id, "dsq-realtime-toggle").click
     end
+
+    # Loop, reading each page of comments
+    read_then_click_next
+
+  else
+    warn "No comments section found"
+  end
 
 end

@@ -16,7 +16,7 @@ module Scuttlebutt
       # Default config used when opening CSVs
       CSV_CONFIG = { headers: true }
 
-      attr_reader :max, :count
+      attr_reader :max, :count, :fields, :filename
 
       def initialize(filename)
         @filename = filename
@@ -26,6 +26,7 @@ module Scuttlebutt
 
         # Count rows only if it's not a pipe or other io
         @max = count_rows if File.file?(@filename)
+        @fields = read_headers
         @count = 0
 
         # Open file handle
@@ -48,15 +49,27 @@ module Scuttlebutt
         return nil
       end
 
+      # Have we reached the end of input?
       def at_end?
         @end
       end
 
+      # Close the CSV
       def close
         @csv.close
       end
 
     private
+
+      # Read available headers from the CSV
+      def read_headers
+        csv = CSV.open(@filename, CSV_CONFIG)
+        csv.shift
+        headers = csv.headers
+        csv.close
+
+        return headers
+      end
 
       # Count CSV rows in a file.
       def count_rows

@@ -11,11 +11,13 @@ module Scuttlebutt
   # Used to keep track of what is instantiated and where
   class Script
 
+    require 'ostruct'
+
     attr_reader :filename, :params, :cls, :instance
 
     def initialize(filename, params, cls)
       @filename   = filename
-      @params     = params
+      @params     = OpenStruct.new(params)
       @cls        = cls
 
       @instance   = nil
@@ -24,6 +26,36 @@ module Scuttlebutt
     def instantiate(log, engine, output)
       @instance   = cls.new(log, engine, output)
     end
+  
+    # Check the output format fits
+    def check_output(output)
+      if !params.output_fields
+        LOG.warn "Warning.  No output list is specified in #{filename}."
+        LOG.warn "          I will continue, but the output will have to be built on-the-fly"
+        LOG.warn "          This usually uses more RAM."
+        return
+      end
+    end
+
+    # Check the input CSV fields are sufficient
+    def check_input(input)
+      if !params.input_fields
+        LOG.warn "Warning.  No input fields are specified in #{filename}."
+        LOG.warn "          I will continue, but the input file might not match the script."
+        return
+      end
+
+      require 'set'
+
+      if !Set.new(params.input_fields).subset?(Set.new(input.fields))
+        LOG.fatal "This script requires fields the input (#{input.filename}) does not provide."
+        LOG.fatal "Fields required: #{params.input_fields.join(', ')}"
+        LOG.fatal "Fields provided: #{input.fields.join(', ')}"
+        LOG.fatal "Fields missing: #{(params.input_fields - input.fields).join(', ')}"
+        raise "Insufficient input fields to run #{filename}."
+      end
+    end
+
   end
 
   # Compile a script (text) into a Script (object)
@@ -85,9 +117,11 @@ module Scuttlebutt
             in_param_block = false
           elsif in_param_block && (m = comment_string.match(SYN_PARAMS))
 
-            key   = m['key']
+            key   = m['key'].to_sym
             value = Shellwords.shellwords(m['value'])
             value = true if value.length == 0
+
+            params[key] = value
 
             LOG.debug "Parameter: #{key}, value: #{value}"
           end
@@ -99,7 +133,7 @@ module Scuttlebutt
         code << line
 
       end # /f.each_line
- 
+
       return params, code.join("\n")
     end
   

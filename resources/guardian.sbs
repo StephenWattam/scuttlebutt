@@ -1,88 +1,96 @@
 # vim: syntax=ruby
 
+
+# -- parameters -- 
+# author:           "Stephen Wattam"
+# email:            stephenwattam@gmail.com
+# browser:          firefox
+# input_fields:     url
+# retries:          5
+# 
+# username:         blah
+# password:         siofn8908in2ur
+# -- end --
+
+
 # Reads a comment thread
 def read_thread(id)
-    status "Reading thread #{id}..."
+  status "Reading thread #{id}..."
 
-    # Return if the id is not set (this occasionally happens due to a
-    # placeholder the Guardian set on their page
-    return if id == ""
+  # Return if the id is not set (this occasionally happens due to a
+  # placeholder the Guardian set on their page
+  return if id == ""
 
-    # Using Xpath, extract fun data
-    try{ find_comment_data(id) }
+  # Using Xpath, extract fun data
+  try{ find_comment_data(id) }
 
-    # Find replies, and look them all up
-    replies   = @e.find_elements(:css, "li##{id} ul.d2-responses li, li##{id} ul.d2-responses div#d2-collapse-wrap li")
-    replies.map! { |el| el.attribute("id") }
+  # Find replies, and look them all up
+  replies   = @e.find_elements(:css, "li##{id} ul.d2-responses li, li##{id} ul.d2-responses div#d2-collapse-wrap li")
+  replies.map! { |el| el.attribute("id") }
 
-    status "Found #{replies.length} replies."
+  status "Found #{replies.length} replies."
 
-    replies.each do |reply_id|
-        try{ find_comment_data(reply_id) } 
-    end
+  replies.each do |reply_id|
+    try{ find_comment_data(reply_id) } 
+  end
 end
 
 
 def find_comment_data(id)
-    return if id.to_s.length == 0
+  return if id.to_s.length == 0
 
-    status "Mining comment #{id}..."
+  status "Mining comment #{id}..."
 
-    # Build shorthand paths so the code below is less ugly (less!)
-    element_path    = "li##{id} div.d2-comment-inner"
-    cpath           = element_path + " div.d2-right-col"
+  # Build shorthand paths so the code below is less ugly (less!)
+  element_path    = "li##{id} div.d2-comment-inner"
+  cpath           = element_path + " div.d2-right-col"
 
-    # Create a handy new hash
-    c           = new_output_row()
-    c.id        = id
-    c.picpath   = @e.find_element(:css, "#{element_path} div.d2-left-col a img").attribute("src")
-    c.username  = @e.find_element(:css, "#{cpath} a.d2-username").text
-    c.userpage  = @e.find_element(:css, "#{cpath} a.d2-username").attribute("href")
-    c.permalink = @e.find_element(:css, "#{cpath} div.d2-permalink p.d2-datetime a").attribute("href")
-    c.body      = @e.find_element(:css, "#{cpath} div.d2-body").text
-    c.rec_count = try(0){ @e.find_element(:css, "#{cpath} div.d2-js-recommender div.d2-recommend-count b").text.to_i }
-    c.reply_to  = try(0){ @e.find_element(:css, "#{cpath} div.d2-in-reply-to a").attribute("href")[1..-1] }
+  # Create a handy new hash
+  c           = new_output_row()
+  c.id        = id
+  c.picpath   = @e.find_element(:css, "#{element_path} div.d2-left-col a img").attribute("src")
+  c.username  = @e.find_element(:css, "#{cpath} a.d2-username").text
+  c.userpage  = @e.find_element(:css, "#{cpath} a.d2-username").attribute("href")
+  c.permalink = @e.find_element(:css, "#{cpath} div.d2-permalink p.d2-datetime a").attribute("href")
+  c.body      = @e.find_element(:css, "#{cpath} div.d2-body").text
+  c.rec_count = try(0){ @e.find_element(:css, "#{cpath} div.d2-js-recommender div.d2-recommend-count b").text.to_i }
+  c.reply_to  = try(0){ @e.find_element(:css, "#{cpath} div.d2-in-reply-to a").attribute("href")[1..-1] }
 
-    # Page-level variables
-    c.story_title  = @r_scratch.title
-    c.story_url    = @r_scratch.url
-    c.story_date   = @r_scratch.url
+  # Page-level variables
+  c.story_title  = @r_scratch.title
+  c.story_url    = @r_scratch.url
+  c.story_date   = @r_scratch.url
 
-    # XXX: at this point we know everything we want, so we can simply push the output 
-    # to the output method.
-    push_output(c)
+  # XXX: at this point we know everything we want, so we can simply push the output 
+  # to the output method.
+  push_output(c)
 end
 
+def read_comment_data
 
-# ---------------------------------------------------------------------------
-##= read_comment_data
-# ---------------------------------------------------------------------------
+  top_level_comments = @e.find_elements(:css => "ul.d2-comments li.d2-comment")
+  top_level_comments.map! { |el| el.attribute("id").strip }
+  top_level_comments.delete(nil)
 
-top_level_comments = @e.find_elements(:css => "ul.d2-comments li.d2-comment")
-top_level_comments.map! { |el| el.attribute("id").strip }
-top_level_comments.delete(nil)
+  status "Found #{top_level_comments.length} threads..."
 
-status "Found #{top_level_comments.length} threads..."
-
-top_level_comments.each do |element|
+  top_level_comments.each do |element|
     read_thread(element)
+  end
 end
 
+def read_then_click_next
 
-# ---------------------------------------------------------------------------
-##= read_then_click_next
-# ---------------------------------------------------------------------------
+  # Read comment data from the current page
+  read_comment_data
 
-# Read comment data from the current page
-read_comment_data
+  status "Moving to next page..."
 
-status "Moving to next page..."
-
-# Find the "next" button
-next_link = try{ @e.find_element(:css, "div.d2-next-page a") }
+  # Find the "next" button
+  next_link = try{ @e.find_element(:css, "div.d2-next-page a") }
 
 
-if next_link
+  if next_link
 
     # Follow the link
     next_link.click
@@ -92,78 +100,52 @@ if next_link
 
     # Read more data from the next page
     read_then_click_next
+  end
 end
 
+def row_up
 
-# ---------------------------------------------------------------------------
-##= r3
-# ---------------------------------------------------------------------------
+  status "Locating comment section..."
 
-status "Region 3"
-
-# ---------------------------------------------------------------------------
-##= system_up
-# ---------------------------------------------------------------------------
-status "System up"
+  # Load the article
+  @e.get(@row.url)
 
 
-# ---------------------------------------------------------------------------
-##= row_up
-# ---------------------------------------------------------------------------
-
-status "Locating comment section..."
-
-# Load the article
-@e.get(@row.url)
-
-
-# Store the title for later use
-@r_scratch.title  = @e.title
-@r_scratch.url    = @row.url
-@r_scratch.date   = try{ @e.find_element(:xpath => "//time[@itemprop='datePublished']").attribute("datetime") }
+  # Store the title for later use
+  @r_scratch.title  = @e.title
+  @r_scratch.url    = @row.url
+  @r_scratch.date   = try{ @e.find_element(:xpath => "//time[@itemprop='datePublished']").attribute("datetime") }
 
 
 
 
-# Find the source of the iframe
-iframe          = @e.find_element("name" => "d2-iframe")
-comment_url     = iframe.attribute("src")
+  # Find the source of the iframe
+  iframe          = @e.find_element("name" => "d2-iframe")
+  comment_url     = iframe.attribute("src")
 
 
 
-status "Selecting comment page..."
+  status "Selecting comment page..."
 
-# Load the iframe contents
-@e.get(comment_url)
-# Select "All comments" if not already
-try{
+  # Load the iframe contents
+  @e.get(comment_url)
+  # Select "All comments" if not already
+  try{
     all_comments_link = @e.find_element(:link_text => "All comments")
     @e.get(all_comments_link.attribute("href"))
-}
+  }
 
 
-# Show threads in "expanded" mode
-# /html/body/div/div[3]/form/div/span[2]/span/select
-select      = @e.find_element(:name => "threads")
-options     = select.find_elements(:tag_name, "option")
-options.each{|o| 
+  # Show threads in "expanded" mode
+  # /html/body/div/div[3]/form/div/span[2]/span/select
+  select      = @e.find_element(:name => "threads")
+  options     = select.find_elements(:tag_name, "option")
+  options.each{|o| 
     o.click if o.attribute("value") =~ /expanded/i
-}
-select.submit
+  }
+  select.submit
 
 
-read_then_click_next
+  read_then_click_next
 
-
-
-# ---------------------------------------------------------------------------
-##= row_down
-# ---------------------------------------------------------------------------
-
-status "Row down"
-
-# ---------------------------------------------------------------------------
-##= system_down
-# ---------------------------------------------------------------------------
-
-status "System [of a] down."
+end
