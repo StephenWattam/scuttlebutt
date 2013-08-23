@@ -96,6 +96,7 @@ module Scuttlebutt::Interpreter
 
       require 'pry'
 
+      Pry.config.pager = false
       Pry.config.prompt = proc { |obj, nest_level, _| "[#{nest_level}]sbdb> " }
 
       # TODO: See if you can auto-pry on the caller rather than relying on the binding passed in
@@ -106,7 +107,7 @@ module Scuttlebutt::Interpreter
 
     # Present output finally to the output method.
     def push_output(row)
-      @log.debug "Outputting row."
+      @log.debug "Pushing data point #{@output.row_count + 1}/row (#{@output.count + 1} total)"# #{row}"
 
       row = row.marshal_dump if row.is_a?(OpenStruct)
       raise "Output objects must be of class Hash or OpenStruct.  If in doubt use new_output_row() to get one." unless row.is_a?(Hash)
@@ -120,6 +121,12 @@ module Scuttlebutt::Interpreter
     # Returns a new output row to be filled out
     def new_output_row
       return OpenStruct.new
+    end
+
+    def delay(sec, max = nil)
+      sec = sec + (rand * (max - sec)) if max && max > sec_or_min
+      @log.debug "Delaying for #{sec.round(2)}s"
+      sleep(sec)
     end
 
     # TODO: loads of helpers and such

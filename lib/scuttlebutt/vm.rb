@@ -50,7 +50,7 @@ module Scuttlebutt
           begin
 
             # Run the row and say it worked.
-            LOG.info "*** Processing row #{count}#{@input.max ? " of #{@input.max}" : ''} (output: #{@output.count} item[s] complete)"
+            LOG.info "*** Processing input row #{count}#{@input.max ? " of #{@input.max}" : ''} (output: #{@output.count} item[s] complete)"
             process_row(obj, row)
             success = true
 

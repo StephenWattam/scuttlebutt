@@ -29,6 +29,10 @@ module Scuttlebutt::Output
       @row_cache.length
     end
 
+    def row_count
+      @row_cache.length
+    end
+
     def start_row
       LOG.debug "Starting new row output cache."
       flush
@@ -106,16 +110,19 @@ module Scuttlebutt::Output
       @rows += @row_cache
     end
 
+    def row_count
+      @row_cache.length
+    end
 
     # Estimate the amount of data unsynced
     def cached_data
-      @rows.length
+      @rows.length + @row_cache.length
     end
 
     # Write output into the object
     def finalise(row)
       @keys = (row.keys + @keys).uniq
-      @rows << row
+      @row_cache << row
 
       # keep count
       @count += 1

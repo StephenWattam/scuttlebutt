@@ -21,6 +21,11 @@ module Scuttlebutt::Output
     def cached_data
       return 0
     end
+    
+    # How many items are on this row?
+    def row_count
+      return 0
+    end
 
     # Force output of cache
     def flush 

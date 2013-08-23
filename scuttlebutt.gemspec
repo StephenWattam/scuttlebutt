@@ -21,6 +21,7 @@ Gem::Specification.new do |s|
   # Executables
   s.bindir      = 'bin'
   s.executables << 'sb'
+  s.executables << 'sbdev'
 
   # Documentation
   s.has_rdoc         = false

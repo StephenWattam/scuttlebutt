@@ -1,0 +1,139 @@
+# vim: syntax=ruby
+
+# -- parameters -- 
+# author:           "Stephen Wattam"
+# email:            stephenwattam@gmail.com
+# browser:          firefox
+# input_fields:     url
+# retries:          5
+# -- end --
+
+
+def wait_for_loading
+
+  try{
+    # Wait for it to load...
+    while( try(''){ @e.find_element(:css, "a#js-view-all-link span.comment-link-text").text } == "Loading..." )
+      delay(1)
+    end
+  }
+
+end
+
+
+def read_comment(id)
+ 
+  debug "Reading comment #{id}"
+
+  # Shorthand css path
+  cpath = "div##{id}"
+
+  c           = new_output_row
+  c.id        = id
+  c.article   = @row.url
+  c.username  = @e.find_element(:css, "#{cpath} p.user-info a.js-usr").text
+  c.user_link = @e.find_element(:css, "#{cpath} p.user-info a.js-usr").attribute("href")
+  c.userinfo  = @e.find_element(:css, "#{cpath} p.user-info").text
+  c.body      = @e.find_element(:css, "#{cpath} p.comment-body").text
+ 
+  # Get date if it's there
+  if (m = c.userinfo.match(/(?<day>[0-9]+)\/(?<month>[0-9]+)\/(?<year>[0-9]+) (?<hour>[0-9]+):(?<minute>[0-9]+)/))
+    c.datetime  = m.string[m.begin(0)..m.end(5)]
+    c.day       = m['day']
+    c.month     = m['month']
+    c.year      = m['year']
+    c.hour      = m['hour']
+    c.minute    = m['minute']
+  end
+
+  # Count up/downvotes
+  is_positive = try{ @e.find_element(:css, "#{cpath} div.rating.positive") }
+  rating      = @e.find_element(:css, "#{cpath} div.rating span.vote-rating").text.to_i
+  c.rating    = rating * (is_positive ? 1 : -1)
+
+  # Lastly, add article-level vars
+  c.article_title = @r_scratch.title
+  c.article_time_published = @r_scratch.time_published
+  c.article_time_updated = @r_scratch.time_published
+
+  # Push output
+  push_output(c)
+
+end
+
+def read_comments
+
+  comment_ids = @e.find_elements(:css, "div.comment").map{|e| e.attribute("id")}
+
+  comment_ids.each{|id|
+    try{ read_comment(id) }
+  }
+
+end
+
+def read_comments_then_click_next
+
+  read_comments
+
+  # Check if the next button exists, and click it if so.
+  if page = try{ @e.find_element(:css, "div.pagination-container div.sch-pagesummary").text } 
+    status "On page #{page}"
+
+    # Click the next button
+    next_button = try{ @e.find_elements(:css, "div.pagination-container div.pagination div a").delete_if {|e| e.text != "Next" }.first }
+    if next_button then
+      next_button.click
+
+      # Wait for the page to load
+      wait_for_loading
+
+      # Read the next page
+      read_comments_then_click_next
+    end
+  end
+end
+
+
+def row_up
+
+  status "Locating comment section..."
+
+  # Load the article
+  @e.get(@row.url)
+
+  # Note article properties
+  @r_scratch.title = @e.title
+  @r_scratch.time_published = try{ @e.find_element(:css, "span.article-timestamp").text }
+  @r_scratch.time_updated   = try{ @e.find_elements(:css, "span.article-timestamp")[1].text }
+
+
+
+  # See if the article has comments
+  tryquit{ @e.find_element(:css, "div#reader-comments") }
+
+
+
+  # Count the comments
+  @r_scratch.comment_count = @e.find_element(:css, "span.readerCommentsCount").text.to_i
+  status "Found #{@r_scratch.comment_count} comment[s]"
+
+
+
+  # If everything doesn't fit on one page...
+  if load_all_button = try{ @e.find_element(:css, "a#js-view-all-link") }
+    
+    # Click "view all" and wait for it to complete
+    load_all_button.click
+
+    wait_for_loading
+  end
+
+
+
+  # Read all comments
+  if @r_scratch.comment_count > 0 then
+    read_comments_then_click_next
+  end
+
+end
+
