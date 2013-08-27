@@ -65,7 +65,7 @@ module Scuttlebutt
     SYN_BEGIN_PARAMS  = /^\s*--\s+parameters\s+--\s*$/
     SYN_END_PARAMS    = /^\s*--\s+end\s+--\s*$/
 
-    SYN_PARAMS        = /^\s*(?<key>[a-z][a-z_0-9]*):(?<value>.+)$/
+    SYN_PARAMS        = /^\s*(?<list>\*)?(?<key>[a-z][a-z_0-9]*):(?<value>.+)$/
 
 
     # Compile an SBS file into a ruby object
@@ -118,12 +118,17 @@ module Scuttlebutt
           elsif in_param_block && (m = comment_string.match(SYN_PARAMS))
 
             key   = m['key'].to_sym
-            value = Shellwords.shellwords(m['value'])
-            value = true if value.length == 0
 
-            params[key] = value
+            # If it's a list, keep it as an array
+            if m['list'] then
+              params[key]  = [] if not params[key]
+              params[key] += Shellwords.shellwords(m['value'])
+            else
+              value = m['value'].to_s.strip
+              params[key] = ((value.length > 0) ? value : true)
+            end
 
-            LOG.debug "Parameter: #{key}, value: #{value}"
+            LOG.debug "Parameter: #{key}#{value.is_a?(Array) ? ' (list)' : ''}, value: #{value}"
           end
 
         end # /if

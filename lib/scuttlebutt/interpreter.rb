@@ -2,6 +2,7 @@
 
 module Scuttlebutt::Interpreter
 
+  require 'ostruct'
 
 
   # Require extra API modules here.
@@ -21,6 +22,10 @@ module Scuttlebutt::Interpreter
     # Add all the defined code
     cls.send(:class_eval, code)
 
+    cls.send(:define_method, :params, Proc.new do
+      return OpenStruct.new(params)
+    end)
+
     # Set the parameters as a read-only method
     cls.singleton_class.class_eval do
       define_method(:params) do ||
@@ -36,7 +41,8 @@ module Scuttlebutt::Interpreter
   # Should contain any module-less API calls, and all data
   class InterpreterBasis < Object
 
-    require 'ostruct'
+    require 'securerandom'
+
     include Scuttlebutt::Messages 
 
     attr_accessor :data, :start_time
@@ -48,13 +54,14 @@ module Scuttlebutt::Interpreter
       @e              = engine
       @row            = nil
       @start_time     = nil
-      @output     = output
+      @output         = output
 
       # The constant is unavailable here...
-      @log        = log
+      @log            = log
 
       # For temp variables.
-      @s_scratch        = OpenStruct.new
+      @s_scratch      = OpenStruct.new
+      @sequential_id  = 0
     end
 
     # - overridden later -
@@ -65,7 +72,7 @@ module Scuttlebutt::Interpreter
 
     # Create a blank scratch for people to store things in.
     def refresh_row_scratch
-      @r_scratch = OpenStruct.new
+      @scratch = OpenStruct.new
     end
 
     # Store the current row as a struct for easier access.
@@ -74,6 +81,28 @@ module Scuttlebutt::Interpreter
     end
 
     private
+
+  
+    # Access the current row without using @
+    def row
+      @row
+    end
+
+    # Get a sequential ID
+    def seq_id
+      @sequential_id += 1
+      return @sequential_id
+    end
+
+    # Generate a UUID
+    def uuid
+      SecureRandom.uuid
+    end
+
+    # Per-row scratch storage
+    def scratch
+      @scratch
+    end
 
     # Start a debug console
     def debug_console(binding = binding)
@@ -123,6 +152,9 @@ module Scuttlebutt::Interpreter
       return OpenStruct.new
     end
 
+    # Wait for a given period of time
+    # Usually it's better to wait *for* something to happen using
+    # conditional waits in the browser driver...
     def delay(sec, max = nil)
       sec = sec + (rand * (max - sec)) if max && max > sec_or_min
       @log.debug "Delaying for #{sec.round(2)}s"

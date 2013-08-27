@@ -2,17 +2,15 @@
 
 
 # -- parameters -- 
-# author:           "Stephen Wattam"
-# email:            stephenwattam@gmail.com
-# browser:          firefox
-# input_fields:     url
-# retries:          5
-# 
-# username:         blah
-# password:         siofn8908in2ur
+#  author:           Stephen Wattam
+#  email:            stephenwattam@gmail.com
+#  browser:          firefox
+# *input_fields:     url
+#  retries:          5
 # -- end --
 
 
+# ===========================================================================
 # Reads a comment thread
 def read_thread(id)
   status "Reading thread #{id}..."
@@ -36,6 +34,7 @@ def read_thread(id)
 end
 
 
+# ===========================================================================
 def find_comment_data(id)
   return if id.to_s.length == 0
 
@@ -57,15 +56,16 @@ def find_comment_data(id)
   c.reply_to  = try(0){ @e.find_element(:css, "#{cpath} div.d2-in-reply-to a").attribute("href")[1..-1] }
 
   # Page-level variables
-  c.story_title  = @r_scratch.title
-  c.story_url    = @r_scratch.url
-  c.story_date   = @r_scratch.url
+  c.story_title  = scratch.title
+  c.story_url    = scratch.url
+  c.story_date   = scratch.url
 
   # XXX: at this point we know everything we want, so we can simply push the output 
   # to the output method.
   push_output(c)
 end
 
+# ===========================================================================
 def read_comment_data
 
   top_level_comments = @e.find_elements(:css => "ul.d2-comments li.d2-comment")
@@ -79,6 +79,7 @@ def read_comment_data
   end
 end
 
+# ===========================================================================
 def read_then_click_next
 
   # Read comment data from the current page
@@ -103,6 +104,7 @@ def read_then_click_next
   end
 end
 
+# ===========================================================================
 def row_up
 
   status "Locating comment section..."
@@ -110,20 +112,14 @@ def row_up
   # Load the article
   @e.get(@row.url)
 
-
   # Store the title for later use
-  @r_scratch.title  = @e.title
-  @r_scratch.url    = @row.url
-  @r_scratch.date   = try{ @e.find_element(:xpath => "//time[@itemprop='datePublished']").attribute("datetime") }
-
-
-
+  scratch.title  = @e.title
+  scratch.url    = @row.url
+  scratch.date   = try{ @e.find_element(:xpath => "//time[@itemprop='datePublished']").attribute("datetime") }
 
   # Find the source of the iframe
   iframe          = @e.find_element("name" => "d2-iframe")
   comment_url     = iframe.attribute("src")
-
-
 
   status "Selecting comment page..."
 
@@ -137,7 +133,7 @@ def row_up
 
 
   # Show threads in "expanded" mode
-  # /html/body/div/div[3]/form/div/span[2]/span/select
+  debug "Switching to 'expanded' mode"
   select      = @e.find_element(:name => "threads")
   options     = select.find_elements(:tag_name, "option")
   options.each{|o| 

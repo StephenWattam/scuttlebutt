@@ -36,7 +36,7 @@ module Scuttlebutt
         count += 1
 
         # Loop until we run out of retries or the row completes successfully...
-        retries = script.params.retries ? script.params.retries.first.to_i : MAX_RETRIES
+        retries = script.params.retries ? script.params.retries.to_i : MAX_RETRIES
         success = false
         while !success && retries > 0
 
@@ -54,12 +54,12 @@ module Scuttlebutt
             process_row(obj, row)
             success = true
 
-          rescue Errno::ECONNREFUSED, EOFError
+          rescue Errno::ECONNREFUSED, EOFError, Interrupt
             @output.discard_row
 
             # Reconnect if the browser dies
             LOG.error "Connection to browser lost, reconnecting and running pullup..."
-            connect_driver
+            @engine.connect_driver
             system_up
           rescue StandardError => e
             @output.discard_row

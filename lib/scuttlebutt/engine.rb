@@ -19,7 +19,7 @@ module Scuttlebutt
     attr_reader :browser
 
     def initialize(browser = :firefox)
-      @browser = browser
+      @browser = browser.to_sym
 
       connect_driver
     end

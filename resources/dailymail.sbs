@@ -1,14 +1,16 @@
 # vim: syntax=ruby
 
 # -- parameters -- 
-# author:           "Stephen Wattam"
-# email:            stephenwattam@gmail.com
-# browser:          firefox
-# input_fields:     url
-# retries:          5
+#  author:           Stephen Wattam
+#  email:            stephenwattam@gmail.com
+#  browser:          firefox
+# *input_fields:     url
+#  retries:          5
 # -- end --
 
-
+# ===========================================================================
+# Waits for the comments to load (necessary because the DM's page can be quite slow to
+# load many comments)
 def wait_for_loading
 
   try{
@@ -20,7 +22,8 @@ def wait_for_loading
 
 end
 
-
+# ===========================================================================
+# Reads a single comment, as identified by a unique HTML ID
 def read_comment(id)
  
   debug "Reading comment #{id}"
@@ -30,7 +33,7 @@ def read_comment(id)
 
   c           = new_output_row
   c.id        = id
-  c.article   = @row.url
+  c.article   = row.url
   c.username  = @e.find_element(:css, "#{cpath} p.user-info a.js-usr").text
   c.user_link = @e.find_element(:css, "#{cpath} p.user-info a.js-usr").attribute("href")
   c.userinfo  = @e.find_element(:css, "#{cpath} p.user-info").text
@@ -52,15 +55,17 @@ def read_comment(id)
   c.rating    = rating * (is_positive ? 1 : -1)
 
   # Lastly, add article-level vars
-  c.article_title = @r_scratch.title
-  c.article_time_published = @r_scratch.time_published
-  c.article_time_updated = @r_scratch.time_published
+  c.article_title = scratch.title
+  c.article_time_published = scratch.time_published
+  c.article_time_updated = scratch.time_published
 
   # Push output
   push_output(c)
 
 end
 
+# ===========================================================================
+# Reads all comments on the current page
 def read_comments
 
   comment_ids = @e.find_elements(:css, "div.comment").map{|e| e.attribute("id")}
@@ -71,6 +76,9 @@ def read_comments
 
 end
 
+# ===========================================================================
+# Reads all comments from the current page of comments, then clicks next (until there
+# are no more comments remaining)
 def read_comments_then_click_next
 
   read_comments
@@ -94,30 +102,26 @@ def read_comments_then_click_next
 end
 
 
+# ===========================================================================
+# Reads a single row's URL and outputs all comments from that page.
 def row_up
 
   status "Locating comment section..."
 
   # Load the article
-  @e.get(@row.url)
+  @e.get(row.url)
 
   # Note article properties
-  @r_scratch.title = @e.title
-  @r_scratch.time_published = try{ @e.find_element(:css, "span.article-timestamp").text }
-  @r_scratch.time_updated   = try{ @e.find_elements(:css, "span.article-timestamp")[1].text }
-
-
+  scratch.title = @e.title
+  scratch.time_published = try{ @e.find_element(:css, "span.article-timestamp").text }
+  scratch.time_updated   = try{ @e.find_elements(:css, "span.article-timestamp")[1].text }
 
   # See if the article has comments
   tryquit{ @e.find_element(:css, "div#reader-comments") }
 
-
-
   # Count the comments
-  @r_scratch.comment_count = @e.find_element(:css, "span.readerCommentsCount").text.to_i
-  status "Found #{@r_scratch.comment_count} comment[s]"
-
-
+  scratch.comment_count = @e.find_element(:css, "span.readerCommentsCount").text.to_i
+  status "Found #{scratch.comment_count} comment[s]"
 
   # If everything doesn't fit on one page...
   if load_all_button = try{ @e.find_element(:css, "a#js-view-all-link") }
@@ -128,10 +132,8 @@ def row_up
     wait_for_loading
   end
 
-
-
   # Read all comments
-  if @r_scratch.comment_count > 0 then
+  if scratch.comment_count > 0 then
     read_comments_then_click_next
   end
 
