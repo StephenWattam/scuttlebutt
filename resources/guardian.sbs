@@ -11,9 +11,9 @@
 
 
 # ===========================================================================
-# Reads a comment thread
+# Reads a comment thread, using find_comment_data to read the comment details
 def read_thread(id)
-  status "Reading thread #{id}..."
+  debug "Reading thread #{id}..."
 
   # Return if the id is not set (this occasionally happens due to a
   # placeholder the Guardian set on their page
@@ -26,7 +26,7 @@ def read_thread(id)
   replies   = @e.find_elements(:css, "li##{id} ul.d2-responses li, li##{id} ul.d2-responses div#d2-collapse-wrap li")
   replies.map! { |el| el.attribute("id") }
 
-  status "Found #{replies.length} replies."
+  debug "Found #{replies.length} replies."
 
   replies.each do |reply_id|
     try{ find_comment_data(reply_id) } 
@@ -35,10 +35,11 @@ end
 
 
 # ===========================================================================
+# Read a comment with a given ID from the page, and send it to the output
 def find_comment_data(id)
   return if id.to_s.length == 0
 
-  status "Mining comment #{id}..."
+  debug "Mining comment #{id}..."
 
   # Build shorthand paths so the code below is less ugly (less!)
   element_path    = "li##{id} div.d2-comment-inner"
@@ -53,12 +54,12 @@ def find_comment_data(id)
   c.permalink = @e.find_element(:css, "#{cpath} div.d2-permalink p.d2-datetime a").attribute("href")
   c.body      = @e.find_element(:css, "#{cpath} div.d2-body").text
   c.rec_count = try(0){ @e.find_element(:css, "#{cpath} div.d2-js-recommender div.d2-recommend-count b").text.to_i }
-  c.reply_to  = try(0){ @e.find_element(:css, "#{cpath} div.d2-in-reply-to a").attribute("href")[1..-1] }
+  c.reply_to  = try(0){ @e.find_element(:css, "#{cpath} a.d2-in-reply-to").attribute("href").to_s.split("#")[-1] }
 
   # Page-level variables
-  c.story_title  = scratch.title
-  c.story_url    = scratch.url
-  c.story_date   = scratch.url
+  c.article_title  = scratch.title
+  c.article_url    = scratch.url
+  c.article_date   = scratch.date
 
   # XXX: at this point we know everything we want, so we can simply push the output 
   # to the output method.
@@ -66,13 +67,14 @@ def find_comment_data(id)
 end
 
 # ===========================================================================
+# Read all comments on a page
 def read_comment_data
 
   top_level_comments = @e.find_elements(:css => "ul.d2-comments li.d2-comment")
   top_level_comments.map! { |el| el.attribute("id").strip }
   top_level_comments.delete(nil)
 
-  status "Found #{top_level_comments.length} threads..."
+  status "Reading #{top_level_comments.length} threads..."
 
   top_level_comments.each do |element|
     read_thread(element)
@@ -80,6 +82,8 @@ def read_comment_data
 end
 
 # ===========================================================================
+# Reads comments on a page, then follows the link to the next page, 
+# if such a link exists.
 def read_then_click_next
 
   # Read comment data from the current page
@@ -105,16 +109,17 @@ def read_then_click_next
 end
 
 # ===========================================================================
+# Visit the input address and read comments from the given story.
 def row_up
 
   status "Locating comment section..."
 
   # Load the article
-  @e.get(@row.url)
+  @e.get(row.url)
 
   # Store the title for later use
   scratch.title  = @e.title
-  scratch.url    = @row.url
+  scratch.url    = row.url
   scratch.date   = try{ @e.find_element(:xpath => "//time[@itemprop='datePublished']").attribute("datetime") }
 
   # Find the source of the iframe

@@ -137,6 +137,8 @@ module Scuttlebutt::Interpreter
     # Present output finally to the output method.
     def push_output(row)
       @log.debug "Pushing data point #{@output.row_count + 1}/row (#{@output.count + 1} total)"# #{row}"
+      @log.debug "Payload: #{row}"
+
 
       row = row.marshal_dump if row.is_a?(OpenStruct)
       raise "Output objects must be of class Hash or OpenStruct.  If in doubt use new_output_row() to get one." unless row.is_a?(Hash)

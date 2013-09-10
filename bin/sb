@@ -26,6 +26,11 @@ def check_file(filename)
 end
 
 
+# puts "\n\n*** WARNING: Debug release 9/9/13 --- NOT for production use."
+# puts "*** This version opportunistically stores data and doesn't ensure"
+# puts "*** consistency row-by-row."
+# puts "\n\n"
+
 
 
 # -----------------------------------------------------------------------------

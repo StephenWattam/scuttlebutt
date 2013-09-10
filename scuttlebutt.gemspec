@@ -1,7 +1,7 @@
 Gem::Specification.new do |s|
   # About the gem
   s.name        = 'scuttlebutt'
-  s.version     = '0.0.1a'
+  s.version     = '0.0.1b'
   s.date        = '2013-08-20'
   s.summary     = 'Web scraping for linguistic purposes'
   s.description = 'A tool to construct comment corpora from websites'

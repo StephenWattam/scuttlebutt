@@ -44,9 +44,6 @@ module Scuttlebutt
       end
     end
 
-
-  private
-
     def connect_driver
       
       LOG.info "Starting driver for browser: #{browser}"
@@ -58,6 +55,8 @@ module Scuttlebutt
       # @driver.visible = false
 
     end
+
+
 
   end
 

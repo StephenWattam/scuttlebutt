@@ -54,13 +54,19 @@ module Scuttlebutt
             process_row(obj, row)
             success = true
 
+          rescue SystemExit, Interrupt
+            @output.discard_row 
+
+            LOG.error "Close requested using control-C"
+            raise "Caught signal."
+
           rescue Errno::ECONNREFUSED, EOFError, Interrupt
             @output.discard_row
 
             # Reconnect if the browser dies
             LOG.error "Connection to browser lost, reconnecting and running pullup..."
             @engine.connect_driver
-            system_up
+            system_up(obj)
           rescue StandardError => e
             @output.discard_row
 
