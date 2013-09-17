@@ -15,6 +15,8 @@ module Scuttlebutt::Output
 
       raise "Output file already exists!" if File.exist?(filename)
 
+      LOG.debug "Uncached CSV output object instantiated."
+
       @keys = keys
       @row_cache = []
 
@@ -50,10 +52,16 @@ module Scuttlebutt::Output
 
     # Write output into the object
     def finalise(row)
+
+      LOG.debug "[out] Caching (1): #{ordered_row}"
+
       ordered_row = []
       @keys.each do |k| 
         ordered_row << row[k]
       end
+
+
+      LOG.debug "[out] Caching (2): #{ordered_row}"
 
       @row_cache << ordered_row 
 
@@ -63,7 +71,12 @@ module Scuttlebutt::Output
 
     # Flush remaining output from cache
     def flush
-      @row_cache.each { |row| @csv << row }
+      @row_cache.each { |row| 
+        
+        LOG.debug "[out] Writing: #{row}"
+        @csv << row 
+      
+      }
       @csv.flush
       @row_cache = []
     end
@@ -86,6 +99,9 @@ module Scuttlebutt::Output
       @filename = filename
 
       raise "Output file already exists!" if File.exist?(filename)
+
+
+      LOG.debug "Cached CSV output object instantiated."
 
       @keys = []
       @rows = []
@@ -122,6 +138,9 @@ module Scuttlebutt::Output
     # Write output into the object
     def finalise(row)
       @keys = (row.keys + @keys).uniq
+
+      LOG.debug "[out] Caching: #{row}"
+
       @row_cache << row
 
       # keep count
@@ -141,6 +160,8 @@ module Scuttlebutt::Output
           # Build in-order row array
           out = []
           @keys.each { |k| out << row[k] }
+
+          LOG.debug "[out] Writing: #{out}"
 
           # Push to CSV
           csv << out

@@ -55,7 +55,8 @@ module Scuttlebutt
             success = true
 
           rescue SystemExit, Interrupt
-            @output.discard_row 
+            @output.finalise_row 
+            # @output.discard_row  FIXME
 
             LOG.error "Close requested using control-C"
             raise "Caught signal."

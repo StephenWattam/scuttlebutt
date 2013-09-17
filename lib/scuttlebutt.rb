@@ -14,6 +14,6 @@ module Scuttlebutt
   require 'scuttlebutt/compiler'
   require 'scuttlebutt/vm'
 
-  VERSION = "0.0.1a"
+  VERSION = "0.0.1c"
 
 end

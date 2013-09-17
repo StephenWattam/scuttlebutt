@@ -10,6 +10,25 @@
 # -- end --
 
 
+
+# ===========================================================================
+# Removes quotes from a string by crudely matching them and replacing them
+# with nothing.
+def calculate_quoteless_body(body_str, quote_strs = [])
+
+    # Sanitise blockquotes
+    quote_strs.uniq!
+    quote_strs.delete("")
+
+    # Then remove them
+    quote_strs.each{ |qstr|
+        body_str.gsub!(qstr, '')
+    }
+
+    return body_str.strip
+end
+
+
 # ===========================================================================
 # Reads a comment thread, using find_comment_data to read the comment details
 def read_thread(id)
@@ -52,7 +71,8 @@ def find_comment_data(id)
   c.username  = @e.find_element(:css, "#{cpath} a.d2-username").text
   c.userpage  = @e.find_element(:css, "#{cpath} a.d2-username").attribute("href")
   c.permalink = @e.find_element(:css, "#{cpath} div.d2-permalink p.d2-datetime a").attribute("href")
-  c.body      = @e.find_element(:css, "#{cpath} div.d2-body").text
+  c.body      = @e.find_element(:css, "#{cpath} div.d2-body").text.strip
+  c.body_noquotes  = calculate_quoteless_body(c.body.dup, @e.find_elements(:css, "#{cpath} div.d2-body blockquote").map{ |el| el.text})
   c.rec_count = try(0){ @e.find_element(:css, "#{cpath} div.d2-js-recommender div.d2-recommend-count b").text.to_i }
   c.reply_to  = try(0){ @e.find_element(:css, "#{cpath} a.d2-in-reply-to").attribute("href").to_s.split("#")[-1] }
 
