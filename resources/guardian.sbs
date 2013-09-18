@@ -93,6 +93,7 @@ def read_comment_data
   top_level_comments = @e.find_elements(:css => "ul.d2-comments li.d2-comment")
   top_level_comments.map! { |el| el.attribute("id").strip }
   top_level_comments.delete(nil)
+  top_level_comments.delete("")
 
   status "Reading #{top_level_comments.length} threads..."
 

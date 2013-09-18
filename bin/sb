@@ -32,26 +32,34 @@ end
 # puts "\n\n"
 
 
+# -----------------------------------------------------------------------------
+# Load libraries and gems
+require 'scuttlebutt'
+include Scuttlebutt
+
 
 # -----------------------------------------------------------------------------
 # Print usage if no argument is given
 if ARGV.length < 3
-  $stderr.puts "USAGE: #{$PROGRAM_NAME} SCRIPT URL_LIST OUTPUT_FILE [LOG_LEVEL]\n"
-  $stderr.puts "\nWhere SCRIPT is a Scuttlebutt script,"
-  $stderr.puts "      URL_LIST is a CSV containing data for scraping,"
-  $stderr.puts "      OUTPUT_FILE is a filepath for CSV output,"
-  $stderr.puts "      LOG_LEVEL (optional) is the log level (info, debug, error, warn, fatal)"
-  exit(1)
+
+  if ARGV.length == 1 && ARGV[0].strip.downcase == "--version"
+    puts "scuttlebutt #{Scuttlebutt::VERSION}"
+    exit(0)
+  else
+
+
+    $stderr.puts "USAGE: #{$PROGRAM_NAME} SCRIPT URL_LIST OUTPUT_FILE [LOG_LEVEL]\n"
+    $stderr.puts "\nWhere SCRIPT is a Scuttlebutt script,"
+    $stderr.puts "      URL_LIST is a CSV containing data for scraping,"
+    $stderr.puts "      OUTPUT_FILE is a filepath for CSV output,"
+    $stderr.puts "      LOG_LEVEL (optional) is the log level (info, debug, error, warn, fatal)"
+    exit(1)
+  end
 end
 
 check_file(ARGV[0])
 check_file(ARGV[1])
 
-
-# -----------------------------------------------------------------------------
-# Load libraries and gems
-require 'scuttlebutt'
-include Scuttlebutt
 
 
 # -----------------------------------------------------------------------------
