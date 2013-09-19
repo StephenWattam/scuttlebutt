@@ -56,6 +56,27 @@ module Scuttlebutt
       end
     end
 
+    # Check the scuttlebutt version against the script
+    def check_version(current)
+      require 'versionomy'
+
+      min = Versionomy.parse(params.min_version)
+      current = Versionomy.parse(VERSION)
+      if current < min 
+        LOG.fatal "This script requires version #{params.min_version} or above, but this is Scuttlebutt version #{VERSION}."
+        exit(1)
+      end
+
+      if params.max_version
+        max = Versionomy.parse(params.maxver_version)
+        if current > max
+          LOG.fatal "This script doesn't work with versions over #{params.max_version}, but this is Scuttlebutt version #{VERSION}."
+          exit(1)
+        end
+      end
+    end
+
+
   end
 
   # Compile a script (text) into a Script (object)
@@ -141,10 +162,10 @@ module Scuttlebutt
 
       return params, code.join("\n")
     end
-  
+ 
     # Perform a syntax check
     def self.syntax_check(filename)
-      LOG.warn "STUB: syntex_check in Scuttlebutt::ScriptCompiler for file #{filename}"
+      LOG.warn "STUB: syntax_check in Scuttlebutt::ScriptCompiler for file #{filename}"
     end
   end
 
