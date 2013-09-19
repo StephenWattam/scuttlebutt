@@ -60,17 +60,19 @@ module Scuttlebutt
     def check_version(current)
       require 'versionomy'
 
-      min = Versionomy.parse(params.min_version)
       current = Versionomy.parse(VERSION)
-      if current < min 
-        LOG.fatal "This script requires version #{params.min_version} or above, but this is Scuttlebutt version #{VERSION}."
-        exit(1)
+      if params.min_version
+        min = Versionomy.parse(params.min_version)
+        if current < min 
+          LOG.fatal "This script requires version #{params.min_version} or above, but this is Scuttlebutt version #{VERSION}."
+          exit(1)
+        end
       end
 
       if params.max_version
         max = Versionomy.parse(params.maxver_version)
         if current > max
-          LOG.fatal "This script doesn't work with versions over #{params.max_version}, but this is Scuttlebutt version #{VERSION}."
+          LOG.fatal "This script requires a version over #{params.max_version}, but this is Scuttlebutt version #{VERSION}."
           exit(1)
         end
       end

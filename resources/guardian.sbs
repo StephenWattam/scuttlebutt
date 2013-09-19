@@ -7,8 +7,7 @@
 #  browser:          firefox
 # *input_fields:     url
 #  retries:          5
-#  min_version:      0.0.1c
-#  max_version:      0.0.1d
+#  sb_version:      0.0.1
 # -- end --
 
 
