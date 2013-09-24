@@ -7,7 +7,8 @@
 #  browser:          firefox
 # *input_fields:     url
 #  retries:          5
-#  sb_version:      0.0.1
+#  sb_version:       0.0.1
+#  script_version:   0.0.1
 # -- end --
 
 
@@ -161,12 +162,19 @@ def row_up
 
   # Show threads in "expanded" mode
   debug "Switching to 'expanded' mode"
-  select      = @e.find_element(:name => "threads")
-  options     = select.find_elements(:tag_name, "option")
-  options.each{|o| 
-    o.click if o.attribute("value") =~ /expanded/i
+  # This isn't always necessary, since sometimes
+  # the Guardian displays everything in full anyway.
+  #
+  # If this is the case, the try{} will fail, which is
+  # fine by me.
+  try{
+    select      = @e.find_element(:name => "threads")
+    options     = select.find_elements(:tag_name, "option")
+    options.each{|o| 
+      o.click if o.attribute("value") =~ /expanded/i
+    }
+    select.submit
   }
-  select.submit
 
 
   read_then_click_next
